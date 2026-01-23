@@ -1,0 +1,101 @@
+import { SigningStargateClient } from '@cosmjs/stargate';
+import { cosmos } from '@manifest-network/manifestjs';
+import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
+import { parseAmount, buildTxResult } from './utils.js';
+
+const { MsgDelegate, MsgUndelegate, MsgBeginRedelegate } = cosmos.staking.v1beta1;
+
+/**
+ * Route staking transaction to appropriate handler
+ */
+export async function routeStakingTransaction(
+  client: SigningStargateClient,
+  senderAddress: string,
+  subcommand: string,
+  args: string[],
+  _config: ManifestMCPConfig,
+  waitForConfirmation: boolean
+): Promise<CosmosTxResult> {
+  switch (subcommand) {
+    case 'delegate': {
+      if (args.length < 2) {
+        throw new ManifestMCPError(
+          ManifestMCPErrorCode.TX_FAILED,
+          'delegate requires validator-address and amount arguments'
+        );
+      }
+
+      const [validatorAddress, amountStr] = args;
+      const { amount, denom } = parseAmount(amountStr);
+
+      const msg = {
+        typeUrl: '/cosmos.staking.v1beta1.MsgDelegate',
+        value: MsgDelegate.fromPartial({
+          delegatorAddress: senderAddress,
+          validatorAddress,
+          amount: { denom, amount },
+        }),
+      };
+
+      const result = await client.signAndBroadcast(senderAddress, [msg], 'auto');
+      return buildTxResult('staking', 'delegate', result, waitForConfirmation);
+    }
+
+    case 'unbond':
+    case 'undelegate': {
+      if (args.length < 2) {
+        throw new ManifestMCPError(
+          ManifestMCPErrorCode.TX_FAILED,
+          'unbond requires validator-address and amount arguments'
+        );
+      }
+
+      const [validatorAddress, amountStr] = args;
+      const { amount, denom } = parseAmount(amountStr);
+
+      const msg = {
+        typeUrl: '/cosmos.staking.v1beta1.MsgUndelegate',
+        value: MsgUndelegate.fromPartial({
+          delegatorAddress: senderAddress,
+          validatorAddress,
+          amount: { denom, amount },
+        }),
+      };
+
+      const result = await client.signAndBroadcast(senderAddress, [msg], 'auto');
+      return buildTxResult('staking', 'unbond', result, waitForConfirmation);
+    }
+
+    case 'redelegate': {
+      if (args.length < 3) {
+        throw new ManifestMCPError(
+          ManifestMCPErrorCode.TX_FAILED,
+          'redelegate requires src-validator, dst-validator, and amount arguments'
+        );
+      }
+
+      const [srcValidatorAddress, dstValidatorAddress, amountStr] = args;
+      const { amount, denom } = parseAmount(amountStr);
+
+      const msg = {
+        typeUrl: '/cosmos.staking.v1beta1.MsgBeginRedelegate',
+        value: MsgBeginRedelegate.fromPartial({
+          delegatorAddress: senderAddress,
+          validatorSrcAddress: srcValidatorAddress,
+          validatorDstAddress: dstValidatorAddress,
+          amount: { denom, amount },
+        }),
+      };
+
+      const result = await client.signAndBroadcast(senderAddress, [msg], 'auto');
+      return buildTxResult('staking', 'redelegate', result, waitForConfirmation);
+    }
+
+    default:
+      throw new ManifestMCPError(
+        ManifestMCPErrorCode.UNSUPPORTED_TX,
+        `Unsupported staking transaction subcommand: ${subcommand}`,
+        { availableSubcommands: ['delegate', 'unbond', 'redelegate'] }
+      );
+  }
+}

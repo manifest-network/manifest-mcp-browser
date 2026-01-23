@@ -1,0 +1,127 @@
+import { describe, it, expect } from 'vitest';
+import {
+  getAvailableModules,
+  getModuleSubcommands,
+  isSubcommandSupported,
+  getSupportedModules,
+} from './modules.js';
+import { ManifestMCPError, ManifestMCPErrorCode } from './types.js';
+
+describe('getAvailableModules', () => {
+  it('should return query and tx modules', () => {
+    const modules = getAvailableModules();
+
+    expect(modules.queryModules).toBeDefined();
+    expect(modules.txModules).toBeDefined();
+    expect(modules.queryModules.length).toBeGreaterThan(0);
+    expect(modules.txModules.length).toBeGreaterThan(0);
+  });
+
+  it('should include expected query modules', () => {
+    const modules = getAvailableModules();
+    const queryNames = modules.queryModules.map(m => m.name);
+
+    expect(queryNames).toContain('bank');
+    expect(queryNames).toContain('staking');
+    expect(queryNames).toContain('distribution');
+    expect(queryNames).toContain('gov');
+    expect(queryNames).toContain('auth');
+    expect(queryNames).toContain('billing');
+  });
+
+  it('should include expected tx modules', () => {
+    const modules = getAvailableModules();
+    const txNames = modules.txModules.map(m => m.name);
+
+    expect(txNames).toContain('bank');
+    expect(txNames).toContain('staking');
+    expect(txNames).toContain('distribution');
+    expect(txNames).toContain('gov');
+    expect(txNames).toContain('billing');
+    expect(txNames).toContain('manifest');
+  });
+});
+
+describe('getModuleSubcommands', () => {
+  it('should return subcommands for valid query module', () => {
+    const subcommands = getModuleSubcommands('query', 'bank');
+
+    expect(subcommands.length).toBeGreaterThan(0);
+    expect(subcommands.some(s => s.name === 'balance')).toBe(true);
+    expect(subcommands.some(s => s.name === 'balances')).toBe(true);
+  });
+
+  it('should return subcommands for valid tx module', () => {
+    const subcommands = getModuleSubcommands('tx', 'bank');
+
+    expect(subcommands.length).toBeGreaterThan(0);
+    expect(subcommands.some(s => s.name === 'send')).toBe(true);
+  });
+
+  it('should throw ManifestMCPError for unknown module', () => {
+    expect(() => getModuleSubcommands('query', 'unknown')).toThrow(ManifestMCPError);
+  });
+
+  it('should have UNKNOWN_MODULE error code', () => {
+    try {
+      getModuleSubcommands('query', 'unknown');
+    } catch (error) {
+      expect((error as ManifestMCPError).code).toBe(ManifestMCPErrorCode.UNKNOWN_MODULE);
+    }
+  });
+
+  it('should include aliases in subcommands', () => {
+    const bankSubcommands = getModuleSubcommands('query', 'bank');
+    expect(bankSubcommands.some(s => s.name === 'total')).toBe(true);
+
+    const stakingSubcommands = getModuleSubcommands('tx', 'staking');
+    expect(stakingSubcommands.some(s => s.name === 'undelegate')).toBe(true);
+  });
+});
+
+describe('isSubcommandSupported', () => {
+  it('should return true for supported query subcommands', () => {
+    expect(isSubcommandSupported('query', 'bank', 'balance')).toBe(true);
+    expect(isSubcommandSupported('query', 'staking', 'delegation')).toBe(true);
+  });
+
+  it('should return true for supported tx subcommands', () => {
+    expect(isSubcommandSupported('tx', 'bank', 'send')).toBe(true);
+    expect(isSubcommandSupported('tx', 'staking', 'delegate')).toBe(true);
+  });
+
+  it('should return false for unsupported subcommands', () => {
+    expect(isSubcommandSupported('query', 'bank', 'unknown')).toBe(false);
+    expect(isSubcommandSupported('tx', 'bank', 'unknown')).toBe(false);
+  });
+
+  it('should return false for unknown modules', () => {
+    expect(isSubcommandSupported('query', 'unknown', 'balance')).toBe(false);
+    expect(isSubcommandSupported('tx', 'unknown', 'send')).toBe(false);
+  });
+
+  it('should support aliases', () => {
+    expect(isSubcommandSupported('query', 'bank', 'total')).toBe(true);
+    expect(isSubcommandSupported('tx', 'staking', 'undelegate')).toBe(true);
+  });
+});
+
+describe('getSupportedModules', () => {
+  it('should return query and tx module maps', () => {
+    const modules = getSupportedModules();
+
+    expect(modules.query).toBeDefined();
+    expect(modules.tx).toBeDefined();
+  });
+
+  it('should include subcommand arrays for each module', () => {
+    const modules = getSupportedModules();
+
+    expect(Array.isArray(modules.query.bank)).toBe(true);
+    expect(modules.query.bank).toContain('balance');
+    expect(modules.query.bank).toContain('balances');
+
+    expect(Array.isArray(modules.tx.bank)).toBe(true);
+    expect(modules.tx.bank).toContain('send');
+  });
+});

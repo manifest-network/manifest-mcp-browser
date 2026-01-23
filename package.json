@@ -1,0 +1,59 @@
+{
+  "name": "manifest-mcp-browser",
+  "version": "0.1.0",
+  "description": "Browser-compatible MCP server for Cosmos SDK blockchain interactions with Manifest Network using CosmJS",
+  "main": "dist/index.js",
+  "browser": "dist/browser.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "browser": "./dist/browser.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./browser": {
+      "import": "./dist/browser.js",
+      "types": "./dist/browser.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:browser": "esbuild src/browser.ts --bundle --format=esm --outfile=dist/browser.js --platform=neutral --external:@manifest-network/* --external:@cosmjs/* --external:@modelcontextprotocol/* --external:@keplr-wallet/*",
+    "build:all": "npm run build && npm run build:browser",
+    "dev": "tsc --watch",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "mcp",
+    "cosmos",
+    "cosmjs",
+    "blockchain",
+    "manifest",
+    "browser",
+    "keplr"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@manifest-network/manifestjs": "2.2.0-billing-v2.0",
+    "@modelcontextprotocol/sdk": "^1.3.0"
+  },
+  "devDependencies": {
+    "@keplr-wallet/types": "^0.12.182",
+    "@types/node": "^20.10.6",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.18"
+  },
+  "peerDependencies": {
+    "@keplr-wallet/types": "^0.12.0"
+  },
+  "peerDependenciesMeta": {
+    "@keplr-wallet/types": {
+      "optional": true
+    }
+  }
+}
