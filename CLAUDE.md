@@ -37,7 +37,7 @@ npm run test:watch    # Run tests in watch mode
 - Registers all Manifest protobuf types from `@manifest-network/manifestjs`
 
 **Wallet Providers** (`src/wallet/`)
-- `WalletProvider` interface defines `getAddress()` and `getSigner()` methods
+- `WalletProvider` interface defines `type: WalletType`, `getAddress()`, and `getSigner()` methods
 - `KeplrWalletProvider` - Browser wallet integration with chain suggestion support
 - `MnemonicWalletProvider` - Uses `DirectSecp256k1HdWallet` for non-interactive/testing use
 

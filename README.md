@@ -186,7 +186,7 @@ const result = await cosmosTx(
 | Runtime | Node.js only | Browser + Node.js |
 | Blockchain access | CLI (manifestd) | CosmJS/HTTP |
 | Module discovery | Dynamic (CLI help) | Static registry |
-| Custom modules | Full support | Limited support |
+| Manifest modules | Full support | Full support (manifestjs) |
 | Keplr support | No | Yes |
 
 ## Error Handling
