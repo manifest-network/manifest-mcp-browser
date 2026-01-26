@@ -76,7 +76,7 @@ function sanitizeForLogging(obj: unknown, depth = 0): unknown {
 
 // Re-export types and utilities
 export * from './types.js';
-export { createConfig, createValidatedConfig, validateConfig, parseGasPrice } from './config.js';
+export { createConfig, createValidatedConfig, validateConfig } from './config.js';
 export { CosmosClientManager } from './client.js';
 export { cosmosQuery, cosmosTx } from './cosmos.js';
 export { getAvailableModules, getModuleSubcommands, getSubcommandUsage, getSupportedModules, isSubcommandSupported } from './modules.js';

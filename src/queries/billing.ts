@@ -1,6 +1,6 @@
 import { ManifestQueryClient } from '../client.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
-import { parseBigInt } from './utils.js';
+import { parseBigInt, defaultPagination } from './utils.js';
 
 /**
  * Route billing module query to manifestjs query client
@@ -32,7 +32,7 @@ export async function routeBillingQuery(
 
     case 'leases': {
       // stateFilter: 0 = LEASE_STATE_UNSPECIFIED (returns all)
-      const result = await billing.leases({ stateFilter: 0 });
+      const result = await billing.leases({ stateFilter: 0, pagination: defaultPagination });
       return { leases: result.leases, pagination: result.pagination };
     }
 
@@ -44,7 +44,7 @@ export async function routeBillingQuery(
         );
       }
       const [tenant] = args;
-      const result = await billing.leasesByTenant({ tenant, stateFilter: 0 });
+      const result = await billing.leasesByTenant({ tenant, stateFilter: 0, pagination: defaultPagination });
       return { leases: result.leases, pagination: result.pagination };
     }
 
@@ -56,7 +56,7 @@ export async function routeBillingQuery(
         );
       }
       const [providerUuid] = args;
-      const result = await billing.leasesByProvider({ providerUuid, stateFilter: 0 });
+      const result = await billing.leasesByProvider({ providerUuid, stateFilter: 0, pagination: defaultPagination });
       return { leases: result.leases, pagination: result.pagination };
     }
 
@@ -68,7 +68,7 @@ export async function routeBillingQuery(
         );
       }
       const [skuUuid] = args;
-      const result = await billing.leasesBySKU({ skuUuid, stateFilter: 0 });
+      const result = await billing.leasesBySKU({ skuUuid, stateFilter: 0, pagination: defaultPagination });
       return { leases: result.leases, pagination: result.pagination };
     }
 
@@ -85,7 +85,7 @@ export async function routeBillingQuery(
     }
 
     case 'credit-accounts': {
-      const result = await billing.creditAccounts({});
+      const result = await billing.creditAccounts({ pagination: defaultPagination });
       return { creditAccounts: result.creditAccounts, pagination: result.pagination };
     }
 

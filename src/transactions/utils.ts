@@ -63,13 +63,18 @@ export function validateMemo(memo: string): void {
 }
 
 /**
- * Safely parse a string to BigInt with proper error handling
+ * Safely parse a string to BigInt with proper error handling and configurable error code.
+ * This is the base implementation used by both transaction and query utilities.
  */
-export function parseBigInt(value: string, fieldName: string): bigint {
+export function parseBigIntWithCode(
+  value: string,
+  fieldName: string,
+  errorCode: ManifestMCPErrorCode
+): bigint {
   // Check for empty string explicitly (BigInt('') returns 0n, not an error)
   if (!value || value.trim() === '') {
     throw new ManifestMCPError(
-      ManifestMCPErrorCode.TX_FAILED,
+      errorCode,
       `Invalid ${fieldName}: empty value. Expected a valid integer.`
     );
   }
@@ -78,10 +83,17 @@ export function parseBigInt(value: string, fieldName: string): bigint {
     return BigInt(value);
   } catch {
     throw new ManifestMCPError(
-      ManifestMCPErrorCode.TX_FAILED,
+      errorCode,
       `Invalid ${fieldName}: "${value}". Expected a valid integer.`
     );
   }
+}
+
+/**
+ * Safely parse a string to BigInt with proper error handling (for transactions)
+ */
+export function parseBigInt(value: string, fieldName: string): bigint {
+  return parseBigIntWithCode(value, fieldName, ManifestMCPErrorCode.TX_FAILED);
 }
 
 /**

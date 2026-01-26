@@ -1,6 +1,6 @@
 import { ManifestQueryClient } from '../client.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
-import { parseBigInt } from './utils.js';
+import { parseBigInt, defaultPagination } from './utils.js';
 
 /**
  * Route distribution query to manifestjs query client
@@ -88,6 +88,7 @@ export async function routeDistributionQuery(
         validatorAddress,
         startingHeight,
         endingHeight,
+        pagination: defaultPagination,
       });
       return { slashes: result.slashes, pagination: result.pagination };
     }

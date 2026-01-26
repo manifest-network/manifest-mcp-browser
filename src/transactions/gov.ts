@@ -3,27 +3,57 @@ import { cosmos } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
 import { parseAmount, buildTxResult, parseBigInt, validateArgsLength } from './utils.js';
 
-const { MsgVote, MsgDeposit, MsgVoteWeighted } = cosmos.gov.v1;
+const { MsgVote, MsgDeposit, MsgVoteWeighted, VoteOption } = cosmos.gov.v1;
 
 /**
- * Parse vote option string to vote option enum value
+ * Parse a decimal weight string to an 18-decimal fixed-point string.
+ * Uses string manipulation to avoid floating-point precision loss.
+ *
+ * @param weightStr - Decimal string like "0.5", "0.333333333333333333", "1"
+ * @returns String representation of weight * 10^18
+ */
+function parseWeightToFixed18(weightStr: string): string {
+  // Validate format: must be a valid decimal number
+  if (!/^\d+(\.\d+)?$/.test(weightStr)) {
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.TX_FAILED,
+      `Invalid weight format: "${weightStr}". Expected decimal like "0.5" or "0.333333333333333333"`
+    );
+  }
+
+  const [intPart, decPart = ''] = weightStr.split('.');
+
+  // Pad or truncate decimal part to exactly 18 digits
+  const paddedDecimal = decPart.padEnd(18, '0').slice(0, 18);
+
+  // Combine integer and decimal parts
+  const combined = intPart + paddedDecimal;
+
+  // Remove leading zeros but keep at least one digit
+  const result = combined.replace(/^0+/, '') || '0';
+
+  return result;
+}
+
+/**
+ * Parse vote option string to VoteOption enum value from manifestjs
  */
 function parseVoteOption(optionStr: string): number {
   const option = optionStr.toLowerCase();
   switch (option) {
     case 'yes':
     case '1':
-      return 1; // VOTE_OPTION_YES
+      return VoteOption.VOTE_OPTION_YES;
     case 'abstain':
     case '2':
-      return 2; // VOTE_OPTION_ABSTAIN
+      return VoteOption.VOTE_OPTION_ABSTAIN;
     case 'no':
     case '3':
-      return 3; // VOTE_OPTION_NO
+      return VoteOption.VOTE_OPTION_NO;
     case 'no_with_veto':
     case 'nowithveto':
     case '4':
-      return 4; // VOTE_OPTION_NO_WITH_VETO
+      return VoteOption.VOTE_OPTION_NO_WITH_VETO;
     default:
       throw new ManifestMCPError(
         ManifestMCPErrorCode.TX_FAILED,
@@ -101,7 +131,8 @@ export async function routeGovTransaction(
         }
         const option = parseVoteOption(optName);
         // Weight is a decimal string (e.g., "0.5" -> "500000000000000000" for 18 decimals)
-        const weight = (parseFloat(weightStr) * 1e18).toFixed(0);
+        // Use string-based conversion to avoid floating-point precision loss
+        const weight = parseWeightToFixed18(weightStr);
         return { option, weight };
       });
 

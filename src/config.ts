@@ -120,19 +120,3 @@ export function createValidatedConfig(input: ManifestMCPConfig): ManifestMCPConf
   return createConfig(input);
 }
 
-/**
- * Parse gas price string into amount and denom
- */
-export function parseGasPrice(gasPrice: string): { amount: string; denom: string } {
-  const match = gasPrice.match(/^(\d+(?:\.\d+)?)([a-zA-Z]+)$/);
-  if (!match) {
-    throw new ManifestMCPError(
-      ManifestMCPErrorCode.INVALID_CONFIG,
-      `Invalid gas price format: ${gasPrice}`
-    );
-  }
-  return {
-    amount: match[1],
-    denom: match[2],
-  };
-}

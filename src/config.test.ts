@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createConfig, validateConfig, createValidatedConfig, parseGasPrice } from './config.js';
+import { createConfig, validateConfig, createValidatedConfig } from './config.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from './types.js';
 
 describe('createConfig', () => {
@@ -139,18 +139,5 @@ describe('createValidatedConfig', () => {
     } catch (error) {
       expect((error as ManifestMCPError).code).toBe(ManifestMCPErrorCode.INVALID_CONFIG);
     }
-  });
-});
-
-describe('parseGasPrice', () => {
-  it('should parse valid gas price strings', () => {
-    expect(parseGasPrice('1.0umfx')).toEqual({ amount: '1.0', denom: 'umfx' });
-    expect(parseGasPrice('0.025uatom')).toEqual({ amount: '0.025', denom: 'uatom' });
-    expect(parseGasPrice('100token')).toEqual({ amount: '100', denom: 'token' });
-  });
-
-  it('should throw ManifestMCPError for invalid format', () => {
-    expect(() => parseGasPrice('invalid')).toThrow(ManifestMCPError);
-    expect(() => parseGasPrice('')).toThrow(ManifestMCPError);
   });
 });

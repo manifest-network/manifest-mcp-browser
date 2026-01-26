@@ -1,6 +1,6 @@
 import { ManifestQueryClient } from '../client.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
-import { parseBigInt } from './utils.js';
+import { parseBigInt, defaultPagination } from './utils.js';
 
 /**
  * Route staking query to manifestjs query client
@@ -36,7 +36,7 @@ export async function routeStakingQuery(
         );
       }
       const [delegatorAddr] = args;
-      const result = await staking.delegatorDelegations({ delegatorAddr });
+      const result = await staking.delegatorDelegations({ delegatorAddr, pagination: defaultPagination });
       return {
         delegationResponses: result.delegationResponses,
         pagination: result.pagination,
@@ -66,7 +66,7 @@ export async function routeStakingQuery(
         );
       }
       const [delegatorAddr] = args;
-      const result = await staking.delegatorUnbondingDelegations({ delegatorAddr });
+      const result = await staking.delegatorUnbondingDelegations({ delegatorAddr, pagination: defaultPagination });
       return {
         unbondingResponses: result.unbondingResponses,
         pagination: result.pagination,
@@ -87,6 +87,7 @@ export async function routeStakingQuery(
         delegatorAddr,
         srcValidatorAddr,
         dstValidatorAddr,
+        pagination: defaultPagination,
       });
       return {
         redelegationResponses: result.redelegationResponses,
@@ -108,7 +109,7 @@ export async function routeStakingQuery(
 
     case 'validators': {
       const status = args[0] || '';
-      const result = await staking.validators({ status });
+      const result = await staking.validators({ status, pagination: defaultPagination });
       return { validators: result.validators, pagination: result.pagination };
     }
 
@@ -120,7 +121,7 @@ export async function routeStakingQuery(
         );
       }
       const [validatorAddr] = args;
-      const result = await staking.validatorDelegations({ validatorAddr });
+      const result = await staking.validatorDelegations({ validatorAddr, pagination: defaultPagination });
       return {
         delegationResponses: result.delegationResponses,
         pagination: result.pagination,
@@ -135,7 +136,7 @@ export async function routeStakingQuery(
         );
       }
       const [validatorAddr] = args;
-      const result = await staking.validatorUnbondingDelegations({ validatorAddr });
+      const result = await staking.validatorUnbondingDelegations({ validatorAddr, pagination: defaultPagination });
       return {
         unbondingResponses: result.unbondingResponses,
         pagination: result.pagination,

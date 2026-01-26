@@ -50,7 +50,10 @@ export class MnemonicWalletProvider implements WalletProvider {
 
       const accounts = await this.wallet.getAccounts();
       if (accounts.length === 0) {
-        throw new Error('No accounts derived from mnemonic');
+        throw new ManifestMCPError(
+          ManifestMCPErrorCode.INVALID_MNEMONIC,
+          'No accounts derived from mnemonic'
+        );
       }
 
       this.address = accounts[0].address;

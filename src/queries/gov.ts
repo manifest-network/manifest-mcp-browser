@@ -1,6 +1,6 @@
 import { ManifestQueryClient } from '../client.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
-import { parseBigInt, parseInt } from './utils.js';
+import { parseBigInt, parseInt, defaultPagination } from './utils.js';
 
 /**
  * Route gov query to manifestjs query client
@@ -30,7 +30,7 @@ export async function routeGovQuery(
       const proposalStatus = args[0] ? parseInt(args[0], 'status') : 0;
       const voter = args[1] || '';
       const depositor = args[2] || '';
-      const result = await gov.proposals({ proposalStatus, voter, depositor });
+      const result = await gov.proposals({ proposalStatus, voter, depositor, pagination: defaultPagination });
       return { proposals: result.proposals, pagination: result.pagination };
     }
 
@@ -55,7 +55,7 @@ export async function routeGovQuery(
         );
       }
       const proposalId = parseBigInt(args[0], 'proposal-id');
-      const result = await gov.votes({ proposalId });
+      const result = await gov.votes({ proposalId, pagination: defaultPagination });
       return { votes: result.votes, pagination: result.pagination };
     }
 
@@ -80,7 +80,7 @@ export async function routeGovQuery(
         );
       }
       const proposalId = parseBigInt(args[0], 'proposal-id');
-      const result = await gov.deposits({ proposalId });
+      const result = await gov.deposits({ proposalId, pagination: defaultPagination });
       return { deposits: result.deposits, pagination: result.pagination };
     }
 

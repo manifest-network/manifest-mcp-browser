@@ -1,4 +1,4 @@
-import { SigningStargateClient, GasPrice } from '@cosmjs/stargate';
+import { SigningStargateClient, GasPrice, HttpEndpoint } from '@cosmjs/stargate';
 import {
   cosmosProtoRegistry,
   cosmosAminoConverters,
@@ -17,6 +17,12 @@ import { ManifestMCPConfig, WalletProvider, ManifestMCPError, ManifestMCPErrorCo
 // Type for the RPC query client from manifestjs liftedinit bundle
 // This includes cosmos modules + liftedinit-specific modules (billing, manifest, sku)
 export type ManifestQueryClient = Awaited<ReturnType<typeof liftedinit.ClientFactory.createRPCQueryClient>>;
+
+/** Default timeout for transaction broadcast (60 seconds) */
+const DEFAULT_BROADCAST_TIMEOUT_MS = 60_000;
+
+/** Default polling interval for transaction confirmation (3 seconds) */
+const DEFAULT_BROADCAST_POLL_INTERVAL_MS = 3_000;
 
 /**
  * Get combined signing client options with all Manifest registries
@@ -111,16 +117,24 @@ export class CosmosClientManager {
         const gasPrice = GasPrice.fromString(this.config.gasPrice);
         const { registry, aminoTypes } = getSigningManifestClientOptions();
 
+        // Configure endpoint with HTTP timeout
+        const endpoint: HttpEndpoint = {
+          url: this.config.rpcUrl,
+          headers: {},
+        };
+
         // Note: Registry type from @cosmjs/proto-signing doesn't perfectly match
         // SigningStargateClientOptions due to telescope-generated proto types.
         // This is a known limitation with custom cosmos-sdk module registries.
         this.signingClient = await SigningStargateClient.connectWithSigner(
-          this.config.rpcUrl,
+          endpoint,
           signer,
           {
             registry: registry as Parameters<typeof SigningStargateClient.connectWithSigner>[2] extends { registry?: infer R } ? R : never,
             aminoTypes,
             gasPrice,
+            broadcastTimeoutMs: DEFAULT_BROADCAST_TIMEOUT_MS,
+            broadcastPollIntervalMs: DEFAULT_BROADCAST_POLL_INTERVAL_MS,
           }
         );
       } catch (error) {

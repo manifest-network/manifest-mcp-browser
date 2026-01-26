@@ -1,5 +1,6 @@
 import { ManifestQueryClient } from '../client.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
+import { defaultPagination } from './utils.js';
 
 /**
  * Route bank query to manifestjs query client
@@ -32,7 +33,7 @@ export async function routeBankQuery(
         );
       }
       const [address] = args;
-      const result = await bank.allBalances({ address, resolveDenom: false });
+      const result = await bank.allBalances({ address, resolveDenom: false, pagination: defaultPagination });
       return { balances: result.balances, pagination: result.pagination };
     }
 
@@ -44,13 +45,13 @@ export async function routeBankQuery(
         );
       }
       const [address] = args;
-      const result = await bank.spendableBalances({ address });
+      const result = await bank.spendableBalances({ address, pagination: defaultPagination });
       return { balances: result.balances, pagination: result.pagination };
     }
 
     case 'total-supply':
     case 'total': {
-      const result = await bank.totalSupply({});
+      const result = await bank.totalSupply({ pagination: defaultPagination });
       return { supply: result.supply, pagination: result.pagination };
     }
 
@@ -84,13 +85,13 @@ export async function routeBankQuery(
     }
 
     case 'denoms-metadata': {
-      const result = await bank.denomsMetadata({});
+      const result = await bank.denomsMetadata({ pagination: defaultPagination });
       return { metadatas: result.metadatas, pagination: result.pagination };
     }
 
     case 'send-enabled': {
       const denoms = args.length > 0 ? args : [];
-      const result = await bank.sendEnabled({ denoms });
+      const result = await bank.sendEnabled({ denoms, pagination: defaultPagination });
       return { sendEnabled: result.sendEnabled, pagination: result.pagination };
     }
 

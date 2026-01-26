@@ -1,4 +1,4 @@
-export { parseBigInt, parseInt } from './utils.js';
+export { parseBigInt, parseInt, defaultPagination, DEFAULT_PAGE_LIMIT } from './utils.js';
 export { routeBankQuery } from './bank.js';
 export { routeStakingQuery } from './staking.js';
 export { routeDistributionQuery } from './distribution.js';
