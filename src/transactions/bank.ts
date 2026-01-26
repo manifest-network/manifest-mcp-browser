@@ -1,7 +1,7 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
-import { parseAmount, buildTxResult } from './utils.js';
+import { parseAmount, buildTxResult, validateAddress, validateMemo, validateArgsLength } from './utils.js';
 
 const { MsgSend, MsgMultiSend } = cosmos.bank.v1beta1;
 
@@ -16,6 +16,8 @@ export async function routeBankTransaction(
   _config: ManifestMCPConfig,
   waitForConfirmation: boolean
 ): Promise<CosmosTxResult> {
+  validateArgsLength(args, 'bank transaction');
+
   switch (subcommand) {
     case 'send': {
       if (args.length < 2) {
@@ -26,6 +28,7 @@ export async function routeBankTransaction(
       }
 
       const [recipientAddress, amountStr] = args;
+      validateAddress(recipientAddress, 'recipient address');
       const { amount, denom } = parseAmount(amountStr);
 
       // Extract optional memo from args
@@ -33,6 +36,7 @@ export async function routeBankTransaction(
       const memoIndex = args.indexOf('--memo');
       if (memoIndex !== -1 && args[memoIndex + 1]) {
         memo = args[memoIndex + 1];
+        validateMemo(memo);
       }
 
       const msg = {
@@ -65,6 +69,7 @@ export async function routeBankTransaction(
             `Invalid multi-send format: ${arg}. Expected format: address:amount`
           );
         }
+        validateAddress(address, 'recipient address');
         const { amount, denom } = parseAmount(amountStr);
         return { address, coins: [{ denom, amount }] };
       });

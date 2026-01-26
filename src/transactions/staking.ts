@@ -1,7 +1,7 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
-import { parseAmount, buildTxResult } from './utils.js';
+import { parseAmount, buildTxResult, validateAddress, validateArgsLength } from './utils.js';
 
 const { MsgDelegate, MsgUndelegate, MsgBeginRedelegate } = cosmos.staking.v1beta1;
 
@@ -16,6 +16,8 @@ export async function routeStakingTransaction(
   _config: ManifestMCPConfig,
   waitForConfirmation: boolean
 ): Promise<CosmosTxResult> {
+  validateArgsLength(args, 'staking transaction');
+
   switch (subcommand) {
     case 'delegate': {
       if (args.length < 2) {
@@ -26,6 +28,7 @@ export async function routeStakingTransaction(
       }
 
       const [validatorAddress, amountStr] = args;
+      validateAddress(validatorAddress, 'validator address');
       const { amount, denom } = parseAmount(amountStr);
 
       const msg = {
@@ -51,6 +54,7 @@ export async function routeStakingTransaction(
       }
 
       const [validatorAddress, amountStr] = args;
+      validateAddress(validatorAddress, 'validator address');
       const { amount, denom } = parseAmount(amountStr);
 
       const msg = {
@@ -75,6 +79,8 @@ export async function routeStakingTransaction(
       }
 
       const [srcValidatorAddress, dstValidatorAddress, amountStr] = args;
+      validateAddress(srcValidatorAddress, 'source validator address');
+      validateAddress(dstValidatorAddress, 'destination validator address');
       const { amount, denom } = parseAmount(amountStr);
 
       const msg = {

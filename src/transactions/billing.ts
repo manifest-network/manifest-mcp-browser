@@ -1,7 +1,7 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { liftedinit } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
-import { parseAmount, buildTxResult, parseBigInt } from './utils.js';
+import { parseAmount, buildTxResult, parseBigInt, validateAddress, validateArgsLength } from './utils.js';
 import { getSubcommandUsage } from '../modules.js';
 
 const { MsgFundCredit, MsgCreateLease, MsgCloseLease, MsgWithdraw } = liftedinit.billing.v1;
@@ -17,6 +17,8 @@ export async function routeBillingTransaction(
   _config: ManifestMCPConfig,
   waitForConfirmation: boolean
 ): Promise<CosmosTxResult> {
+  validateArgsLength(args, 'billing transaction');
+
   switch (subcommand) {
     case 'fund-credit': {
       if (args.length < 2) {
@@ -29,16 +31,7 @@ export async function routeBillingTransaction(
       }
 
       const [tenant, amountStr] = args;
-
-      // Validate tenant address format
-      if (!tenant.startsWith('manifest1')) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          `Invalid tenant address: "${tenant}". Expected a manifest address starting with "manifest1". Received args: [${args.map(a => `"${a}"`).join(', ')}]`,
-          { receivedArgs: args, receivedTenant: tenant }
-        );
-      }
-
+      validateAddress(tenant, 'tenant address');
       const { amount, denom } = parseAmount(amountStr);
 
       const msg = {

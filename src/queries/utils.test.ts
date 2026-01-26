@@ -14,9 +14,10 @@ describe('parseBigInt', () => {
     expect(() => parseBigInt('12.34', 'height')).toThrow(ManifestMCPError);
   });
 
-  it('should treat empty string as zero', () => {
-    // BigInt('') returns 0n in JavaScript
-    expect(parseBigInt('', 'height')).toBe(BigInt(0));
+  it('should throw ManifestMCPError for empty string', () => {
+    // Empty string should be rejected for security (prevents accidental 0 values)
+    expect(() => parseBigInt('', 'height')).toThrow(ManifestMCPError);
+    expect(() => parseBigInt('   ', 'height')).toThrow(ManifestMCPError);
   });
 
   it('should have correct error code', () => {

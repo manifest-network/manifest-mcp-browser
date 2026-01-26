@@ -1,7 +1,7 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
-import { parseAmount, buildTxResult } from './utils.js';
+import { parseAmount, buildTxResult, validateAddress, validateArgsLength } from './utils.js';
 
 const { MsgWithdrawDelegatorReward, MsgSetWithdrawAddress, MsgFundCommunityPool } = cosmos.distribution.v1beta1;
 
@@ -16,6 +16,8 @@ export async function routeDistributionTransaction(
   _config: ManifestMCPConfig,
   waitForConfirmation: boolean
 ): Promise<CosmosTxResult> {
+  validateArgsLength(args, 'distribution transaction');
+
   switch (subcommand) {
     case 'withdraw-rewards': {
       if (args.length < 1) {
@@ -26,6 +28,7 @@ export async function routeDistributionTransaction(
       }
 
       const [validatorAddress] = args;
+      validateAddress(validatorAddress, 'validator address');
 
       const msg = {
         typeUrl: '/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward',
@@ -48,6 +51,7 @@ export async function routeDistributionTransaction(
       }
 
       const [withdrawAddress] = args;
+      validateAddress(withdrawAddress, 'withdraw address');
 
       const msg = {
         typeUrl: '/cosmos.distribution.v1beta1.MsgSetWithdrawAddress',

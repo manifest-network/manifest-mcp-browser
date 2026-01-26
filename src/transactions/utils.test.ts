@@ -112,9 +112,10 @@ describe('parseBigInt', () => {
     expect(() => parseBigInt('1e10', 'field')).toThrow(ManifestMCPError);
   });
 
-  it('should treat empty string as zero', () => {
-    // BigInt('') returns 0n in JavaScript
-    expect(parseBigInt('', 'field')).toBe(BigInt(0));
+  it('should throw ManifestMCPError for empty string', () => {
+    // Empty string should be rejected for security (prevents accidental 0 values)
+    expect(() => parseBigInt('', 'field')).toThrow(ManifestMCPError);
+    expect(() => parseBigInt('   ', 'field')).toThrow(ManifestMCPError);
   });
 
   it('should include field name in error message', () => {

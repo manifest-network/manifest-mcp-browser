@@ -1,7 +1,7 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
-import { parseAmount, buildTxResult, parseBigInt } from './utils.js';
+import { parseAmount, buildTxResult, parseBigInt, validateArgsLength } from './utils.js';
 
 const { MsgVote, MsgDeposit, MsgVoteWeighted } = cosmos.gov.v1;
 
@@ -43,6 +43,8 @@ export async function routeGovTransaction(
   _config: ManifestMCPConfig,
   waitForConfirmation: boolean
 ): Promise<CosmosTxResult> {
+  validateArgsLength(args, 'gov transaction');
+
   switch (subcommand) {
     case 'vote': {
       if (args.length < 2) {

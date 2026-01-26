@@ -4,6 +4,12 @@ import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
  * Safely parse a string to BigInt with proper error handling
  */
 export function parseBigInt(value: string, fieldName: string): bigint {
+  if (!value || value.trim() === '') {
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.QUERY_FAILED,
+      `Invalid ${fieldName}: empty value. Expected a valid integer.`
+    );
+  }
   try {
     return BigInt(value);
   } catch {

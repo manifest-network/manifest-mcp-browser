@@ -1,10 +1,79 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
+import { fromBech32 } from '@cosmjs/encoding';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult } from '../types.js';
+
+/** Maximum number of arguments allowed */
+export const MAX_ARGS = 100;
+
+/** Maximum memo length (Cosmos SDK default) */
+export const MAX_MEMO_LENGTH = 256;
+
+/**
+ * Validate args array length
+ */
+export function validateArgsLength(args: string[], context: string): void {
+  if (args.length > MAX_ARGS) {
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.TX_FAILED,
+      `Too many arguments for ${context}: ${args.length}. Maximum allowed: ${MAX_ARGS}`
+    );
+  }
+}
+
+/**
+ * Validate a bech32 address using @cosmjs/encoding
+ */
+export function validateAddress(address: string, fieldName: string, expectedPrefix?: string): void {
+  if (!address || address.trim() === '') {
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.INVALID_ADDRESS,
+      `${fieldName} is required`
+    );
+  }
+
+  try {
+    const { prefix } = fromBech32(address);
+    if (expectedPrefix && prefix !== expectedPrefix) {
+      throw new ManifestMCPError(
+        ManifestMCPErrorCode.INVALID_ADDRESS,
+        `Invalid ${fieldName}: "${address}". Expected prefix "${expectedPrefix}", got "${prefix}"`
+      );
+    }
+  } catch (error) {
+    if (error instanceof ManifestMCPError) {
+      throw error;
+    }
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.INVALID_ADDRESS,
+      `Invalid ${fieldName}: "${address}". Not a valid bech32 address.`
+    );
+  }
+}
+
+/**
+ * Validate memo length
+ */
+export function validateMemo(memo: string): void {
+  if (memo.length > MAX_MEMO_LENGTH) {
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.TX_FAILED,
+      `Memo too long: ${memo.length} characters. Maximum allowed: ${MAX_MEMO_LENGTH}`
+    );
+  }
+}
 
 /**
  * Safely parse a string to BigInt with proper error handling
  */
 export function parseBigInt(value: string, fieldName: string): bigint {
+  // Check for empty string explicitly (BigInt('') returns 0n, not an error)
+  if (!value || value.trim() === '') {
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.TX_FAILED,
+      `Invalid ${fieldName}: empty value. Expected a valid integer.`
+    );
+  }
+
   try {
     return BigInt(value);
   } catch {
