@@ -26,7 +26,7 @@
     "manifest",
     "browser"
   ],
-  "author": "",
+  "author": "Felix C. Morency",
   "license": "MIT",
   "dependencies": {
     "@manifest-network/manifestjs": "2.2.0-billing-v2.0",
