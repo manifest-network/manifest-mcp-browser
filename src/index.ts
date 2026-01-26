@@ -447,3 +447,38 @@ export class ManifestMCPServer {
     this.clientManager.disconnect();
   }
 }
+
+/**
+ * Create a ManifestMCPServer with mnemonic wallet (for testing or non-interactive use)
+ *
+ * @example
+ * ```typescript
+ * import { createMnemonicServer } from 'manifest-mcp-browser';
+ *
+ * const server = await createMnemonicServer({
+ *   chainId: 'manifest-ledger-testnet',
+ *   rpcUrl: 'https://nodes.chandrastation.com/rpc/manifest/',
+ *   gasPrice: '1.0umfx',
+ *   mnemonic: 'your twelve word mnemonic phrase here...',
+ * });
+ * ```
+ */
+export async function createMnemonicServer(config: {
+  chainId: string;
+  rpcUrl: string;
+  gasPrice: string;
+  gasAdjustment?: number;
+  addressPrefix?: string;
+  mnemonic: string;
+}): Promise<ManifestMCPServer> {
+  const { MnemonicWalletProvider } = await import('./wallet/mnemonic.js');
+
+  const { mnemonic, ...mcpConfig } = config;
+  const walletProvider = new MnemonicWalletProvider(mcpConfig, mnemonic);
+  await walletProvider.connect();
+
+  return new ManifestMCPServer({
+    config: mcpConfig,
+    walletProvider,
+  });
+}

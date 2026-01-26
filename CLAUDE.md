@@ -9,21 +9,18 @@ Browser-compatible MCP (Model Context Protocol) server for Cosmos SDK blockchain
 ## Build Commands
 
 ```bash
-npm run build         # TypeScript compilation to dist/
-npm run build:browser # Bundle browser entry point with esbuild
-npm run build:all     # Run both builds
-npm run dev           # Watch mode for TypeScript
-npm run lint          # Type-check without emitting (tsc --noEmit)
-npm test              # Run tests with vitest
-npm run test:watch    # Run tests in watch mode
+npm run build       # TypeScript compilation to dist/
+npm run dev         # Watch mode for TypeScript
+npm run lint        # Type-check without emitting (tsc --noEmit)
+npm test            # Run tests with vitest
+npm run test:watch  # Run tests in watch mode
 ```
 
 ## Architecture
 
-### Entry Points
+### Entry Point
 
-- `src/index.ts` - Main entry point, exports `ManifestMCPServer` class and all public APIs
-- `src/browser.ts` - Browser-specific entry with `createMnemonicServer()` factory function
+- `src/index.ts` - Main entry point, exports `ManifestMCPServer` class, `createMnemonicServer()`, and all public APIs
 
 ### Core Components
 

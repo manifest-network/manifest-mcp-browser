@@ -13,13 +13,11 @@ npm install manifest-mcp-browser
 ## Development
 
 ```bash
-npm run build         # TypeScript compilation to dist/
-npm run build:browser # Bundle browser entry point with esbuild
-npm run build:all     # Run both builds
-npm run dev           # Watch mode for TypeScript
-npm run lint          # Type-check without emitting
-npm test              # Run tests
-npm run test:watch    # Run tests in watch mode
+npm run build       # TypeScript compilation to dist/
+npm run dev         # Watch mode for TypeScript
+npm run lint        # Type-check without emitting
+npm test            # Run tests
+npm run test:watch  # Run tests in watch mode
 ```
 
 ## Quick Start
@@ -78,7 +76,7 @@ function MyComponent() {
 For testing or non-interactive environments:
 
 ```typescript
-import { createMnemonicServer } from 'manifest-mcp-browser/browser';
+import { createMnemonicServer } from 'manifest-mcp-browser';
 
 const server = await createMnemonicServer({
   chainId: 'manifest-ledger-testnet',
