@@ -199,7 +199,7 @@ const result = await cosmosTx(
 
 ## Error Handling
 
-All errors are wrapped in `ManifestMCPError` with error codes:
+All errors are wrapped in `ManifestMCPError` with typed error codes:
 
 ```typescript
 import { ManifestMCPError, ManifestMCPErrorCode } from 'manifest-mcp-browser';
@@ -209,11 +209,26 @@ try {
 } catch (error) {
   if (error instanceof ManifestMCPError) {
     console.log(error.code);    // e.g., "TX_FAILED"
-    console.log(error.message); // Human-readable message
+    console.log(error.message); // Human-readable message with hints
     console.log(error.details); // Additional context
   }
 }
 ```
+
+### Error Codes
+
+| Code | Description |
+|------|-------------|
+| `INVALID_CONFIG` | Configuration validation failed |
+| `INVALID_ADDRESS` | Bech32 address validation failed |
+| `INVALID_MNEMONIC` | Invalid mnemonic phrase |
+| `TX_FAILED` | Transaction failed (invalid format, validation error) |
+| `TX_BROADCAST_FAILED` | Transaction broadcast failed |
+| `QUERY_FAILED` | Query failed (invalid args, RPC error) |
+| `UNSUPPORTED_TX` | Unsupported transaction module/subcommand |
+| `UNSUPPORTED_QUERY` | Unsupported query module/subcommand |
+| `RPC_CONNECTION_FAILED` | Failed to connect to RPC endpoint |
+| `WALLET_NOT_CONNECTED` | Wallet not connected or disconnected |
 
 ## CORS Requirements
 
@@ -240,11 +255,31 @@ This MCP server is wallet-agnostic. Security depends on the wallet provider you 
 - After disconnect, create a new instance if needed
 - Not recommended for production browser applications
 
+### Input Validation
+
+All inputs are validated to prevent common attack vectors:
+
+- **Address validation**: Bech32 format validated using `@cosmjs/encoding`
+- **Amount format**: Must be `<number><denom>` (e.g., `1000000umfx`)
+- **Memo length**: Limited to 256 characters (Cosmos SDK default)
+- **Args count**: Limited to 100 arguments per call
+- **BigInt parsing**: Empty strings rejected (prevents silent 0n values)
+- **Hex strings**: Validated format and length for address-bytes queries
+
+### Resource Limits
+
+Built-in protections against resource exhaustion:
+
+- **Pagination**: All list queries default to 100 items max
+- **Broadcast timeout**: Transactions timeout after 60 seconds
+- **Poll interval**: Transaction confirmation polled every 3 seconds
+
 ### Best Practices
 
 1. **Use wallet adapters in browsers** - Let users control their own keys via cosmos-kit, Web3Auth, etc.
 2. **Never hardcode mnemonics** - Use environment variables or secure vaults for testing
 3. **Call disconnect() when done** - Ensures sensitive data is cleared from memory
+4. **Use HTTPS RPC endpoints** - Prevent man-in-the-middle attacks
 
 ### Error Response Sanitization
 

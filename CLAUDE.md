@@ -45,12 +45,20 @@ npm run test:watch  # Run tests in watch mode
 **queries/** - Module-specific query handlers
 - Each file exports `route{Module}Query()` function
 - Uses manifestjs RPC query client (`liftedinit.ClientFactory.createRPCQueryClient`)
-- Shared utilities in `utils.ts`: `parseBigInt()` and `parseInt()` for safe argument parsing
+- Shared utilities in `utils.ts`: `parseBigInt()`, `parseInt()`, `defaultPagination`
+- All paginated queries use `DEFAULT_PAGE_LIMIT` (100) to prevent resource exhaustion
 
 **transactions/** - Module-specific transaction handlers
 - Each file exports `route{Module}Transaction()` function
 - Uses CosmJS `SigningStargateClient` with Manifest registries
-- Shared utilities in `utils.ts`: `parseAmount()` and `buildTxResult()`
+- Uses manifestjs enums (e.g., `VoteOption` from `cosmos.gov.v1`)
+- Shared utilities in `utils.ts`:
+  - `parseAmount()` - Parse amount strings with helpful error hints
+  - `parseBigIntWithCode()` - Base implementation used by both queries and transactions
+  - `validateAddress()` - Bech32 validation using `@cosmjs/encoding`
+  - `validateMemo()` - Enforce 256 char limit (Cosmos SDK default)
+  - `validateArgsLength()` - Enforce 100 args max to prevent DoS
+  - `buildTxResult()` - Build transaction result objects
 
 **modules.ts** - Static registry of all supported modules and subcommands (no dynamic CLI discovery)
 
@@ -61,9 +69,31 @@ Transaction: bank, staking, distribution, gov, billing, manifest
 
 ### Key Dependencies
 
-- `@manifest-network/manifestjs` - Protobuf types, registries, and RPC client factory
+- `@manifest-network/manifestjs` - Protobuf types, registries, RPC client factory, and enums (e.g., `VoteOption`)
 - `@modelcontextprotocol/sdk` - MCP server implementation
-- `@cosmjs/*` - Signing, encoding, stargate client
+- `@cosmjs/stargate` - Signing client, gas price parsing
+- `@cosmjs/encoding` - Bech32 address validation (`fromBech32`)
+- `@cosmjs/proto-signing` - Wallet and signer interfaces
+
+### Security Features
+
+**Input Validation:**
+- Bech32 address validation using `@cosmjs/encoding`
+- Amount format validation with helpful error hints
+- Memo length limit (256 chars, Cosmos SDK default)
+- Args array length limit (100 max)
+- BigInt empty string rejection (prevents silent 0n)
+- Hex string validation for address-bytes queries
+
+**Resource Limits:**
+- Default pagination limit of 100 items for all list queries
+- Transaction broadcast timeout (60 seconds)
+- Broadcast poll interval (3 seconds)
+
+**Sensitive Data:**
+- Error responses sanitize sensitive fields (mnemonic, privateKey, secret, etc.)
+- Mnemonic cleared on wallet disconnect
+- No logging of sensitive data
 
 ### Error Handling
 
