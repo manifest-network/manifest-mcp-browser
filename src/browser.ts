@@ -1,8 +1,7 @@
 /**
- * Browser-specific entry point for manifest-mcp-browser
+ * Browser-compatible entry point for manifest-mcp-browser
  *
- * This module exports everything needed for browser usage,
- * with Keplr wallet support as the primary wallet provider.
+ * Use any wallet that provides an OfflineSigner (cosmos-kit, Web3Auth, etc.)
  */
 
 // Core types and errors
@@ -26,8 +25,7 @@ export {
   parseGasPrice,
 } from './config.js';
 
-// Wallet providers
-export { KeplrWalletProvider } from './wallet/keplr.js';
+// Wallet provider for testing
 export { MnemonicWalletProvider } from './wallet/mnemonic.js';
 
 // Client manager
@@ -46,41 +44,6 @@ export {
 
 // MCP Server
 export { ManifestMCPServer, ManifestMCPServerOptions } from './index.js';
-
-/**
- * Create a ManifestMCPServer with Keplr wallet for browser usage
- *
- * @example
- * ```typescript
- * import { createBrowserServer } from 'manifest-mcp-browser/browser';
- *
- * const server = await createBrowserServer({
- *   chainId: 'manifest-ledger-testnet',
- *   rpcUrl: 'https://nodes.chandrastation.com/rpc/manifest/',
- *   gasPrice: '1.0umfx',
- * });
- *
- * // Use the server...
- * ```
- */
-export async function createBrowserServer(config: {
-  chainId: string;
-  rpcUrl: string;
-  gasPrice: string;
-  gasAdjustment?: number;
-  addressPrefix?: string;
-}): Promise<import('./index.js').ManifestMCPServer> {
-  const { ManifestMCPServer } = await import('./index.js');
-  const { KeplrWalletProvider } = await import('./wallet/keplr.js');
-
-  const walletProvider = new KeplrWalletProvider(config);
-  await walletProvider.connect();
-
-  return new ManifestMCPServer({
-    config,
-    walletProvider,
-  });
-}
 
 /**
  * Create a ManifestMCPServer with mnemonic wallet (for testing or non-interactive use)

@@ -24,21 +24,58 @@ npm run test:watch    # Run tests in watch mode
 
 ## Quick Start
 
-### Browser with Keplr
+### With Any Wallet (cosmos-kit, Web3Auth, etc.)
+
+The MCP server works with any wallet that provides an `OfflineSigner`:
 
 ```typescript
-import { createBrowserServer } from 'manifest-mcp-browser/browser';
+import { ManifestMCPServer, WalletProvider } from 'manifest-mcp-browser';
+import { OfflineSigner } from '@cosmjs/proto-signing';
 
-const server = await createBrowserServer({
-  chainId: 'manifest-ledger-testnet',
-  rpcUrl: 'https://nodes.chandrastation.com/rpc/manifest/',
-  gasPrice: '1.0umfx',
+// Create a wallet provider from your existing signer
+const walletProvider: WalletProvider = {
+  getAddress: async () => address,
+  getSigner: async () => yourOfflineSigner,
+};
+
+const server = new ManifestMCPServer({
+  config: {
+    chainId: 'manifest-ledger-testnet',
+    rpcUrl: 'https://nodes.chandrastation.com/rpc/manifest/',
+    gasPrice: '1.0umfx',
+  },
+  walletProvider,
 });
-
-// The server is now ready to handle MCP requests
 ```
 
-### Node.js with Mnemonic
+### With cosmos-kit
+
+```typescript
+import { useChain } from '@cosmos-kit/react';
+import { ManifestMCPServer, WalletProvider } from 'manifest-mcp-browser';
+
+function MyComponent() {
+  const { address, getOfflineSigner } = useChain('manifest');
+
+  const walletProvider: WalletProvider = {
+    getAddress: async () => address!,
+    getSigner: async () => getOfflineSigner(),
+  };
+
+  const server = new ManifestMCPServer({
+    config: {
+      chainId: 'manifest-ledger-testnet',
+      rpcUrl: 'https://nodes.chandrastation.com/rpc/manifest/',
+      gasPrice: '1.0umfx',
+    },
+    walletProvider,
+  });
+}
+```
+
+### Testing with Mnemonic
+
+For testing or non-interactive environments:
 
 ```typescript
 import { createMnemonicServer } from 'manifest-mcp-browser/browser';
@@ -48,33 +85,6 @@ const server = await createMnemonicServer({
   rpcUrl: 'https://nodes.chandrastation.com/rpc/manifest/',
   gasPrice: '1.0umfx',
   mnemonic: 'your twelve word mnemonic phrase here...',
-});
-```
-
-### Manual Setup
-
-```typescript
-import {
-  ManifestMCPServer,
-  KeplrWalletProvider,
-  MnemonicWalletProvider,
-} from 'manifest-mcp-browser';
-
-// With Keplr
-const keplrWallet = new KeplrWalletProvider({
-  chainId: 'manifest-ledger-testnet',
-  rpcUrl: 'https://nodes.chandrastation.com/rpc/manifest/',
-  gasPrice: '1.0umfx',
-});
-await keplrWallet.connect();
-
-const server = new ManifestMCPServer({
-  config: {
-    chainId: 'manifest-ledger-testnet',
-    rpcUrl: 'https://nodes.chandrastation.com/rpc/manifest/',
-    gasPrice: '1.0umfx',
-  },
-  walletProvider: keplrWallet,
 });
 ```
 
@@ -124,23 +134,26 @@ interface ManifestMCPConfig {
 }
 ```
 
-## Wallet Providers
+## Wallet Provider Interface
 
-### KeplrWalletProvider
-
-For browser environments with Keplr extension installed.
+Any wallet that provides an `OfflineSigner` can be used:
 
 ```typescript
-const wallet = new KeplrWalletProvider(config);
-await wallet.connect();  // Prompts user to approve
-const address = await wallet.getAddress();
+interface WalletProvider {
+  getAddress(): Promise<string>;
+  getSigner(): Promise<OfflineSigner>;
+  connect?(): Promise<void>;
+  disconnect?(): Promise<void>;
+}
 ```
 
 ### MnemonicWalletProvider
 
-For non-interactive or testing environments.
+Built-in provider for testing or non-interactive environments:
 
 ```typescript
+import { MnemonicWalletProvider } from 'manifest-mcp-browser';
+
 const wallet = new MnemonicWalletProvider(config, mnemonic);
 await wallet.connect();
 const address = await wallet.getAddress();
@@ -155,11 +168,9 @@ import {
   CosmosClientManager,
   cosmosQuery,
   cosmosTx,
-  MnemonicWalletProvider,
 } from 'manifest-mcp-browser';
 
-const wallet = new MnemonicWalletProvider(config, mnemonic);
-const clientManager = CosmosClientManager.getInstance(config, wallet);
+const clientManager = CosmosClientManager.getInstance(config, walletProvider);
 
 // Query balance
 const balance = await cosmosQuery(
@@ -187,7 +198,6 @@ const result = await cosmosTx(
 | Blockchain access | CLI (manifestd) | CosmJS/HTTP |
 | Module discovery | Dynamic (CLI help) | Static registry |
 | Manifest modules | Full support | Full support (manifestjs) |
-| Keplr support | No | Yes |
 
 ## Error Handling
 
@@ -219,36 +229,30 @@ The RPC endpoint must allow cross-origin requests for browser usage. If you enco
 
 ### Key Handling
 
-**KeplrWalletProvider (Recommended for browsers)**
-- Private keys never leave the Keplr extension
-- Only the signing interface is exposed to the application
-- User must approve each transaction in the Keplr popup
-- No sensitive data stored in application memory
+This MCP server is wallet-agnostic. Security depends on the wallet provider you use:
 
-**MnemonicWalletProvider (For testing/non-interactive use)**
+- **cosmos-kit / Keplr / Leap**: Private keys stay in the wallet extension
+- **Web3Auth**: Keys are reconstructed client-side using MPC
+- **MnemonicWalletProvider**: Mnemonic stored in memory (for testing only)
+
+### MnemonicWalletProvider Security
+
 - Mnemonic is stored in memory during the wallet's lifetime
 - Calling `disconnect()` clears the mnemonic and prevents reconnection
-- After disconnect, create a new `MnemonicWalletProvider` instance if needed
+- After disconnect, create a new instance if needed
 - Not recommended for production browser applications
 
 ### Best Practices
 
-1. **Never hardcode mnemonics** - Use environment variables or secure vaults
-2. **Use Keplr in browsers** - Let users control their own keys
+1. **Use wallet adapters in browsers** - Let users control their own keys via cosmos-kit, Web3Auth, etc.
+2. **Never hardcode mnemonics** - Use environment variables or secure vaults for testing
 3. **Call disconnect() when done** - Ensures sensitive data is cleared from memory
-4. **Limit mnemonic scope** - Use dedicated wallets for testing with minimal funds
 
 ### Error Response Sanitization
 
 Error responses automatically redact sensitive fields to prevent accidental exposure:
 - Fields named `mnemonic`, `privateKey`, `secret`, `password`, `seed`, `key`, `token`, `apiKey` are replaced with `[REDACTED]`
 - Strings that appear to be mnemonics (12 or 24 words) are replaced with `[REDACTED - possible mnemonic]`
-
-```typescript
-// Example: If an error occurs with sensitive input
-// Input: { mnemonic: "word1 word2 ... word12" }
-// Error response shows: { mnemonic: "[REDACTED]" }
-```
 
 ### Browser Security Considerations
 

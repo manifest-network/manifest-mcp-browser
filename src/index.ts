@@ -80,7 +80,7 @@ export { createConfig, createValidatedConfig, validateConfig, parseGasPrice } fr
 export { CosmosClientManager } from './client.js';
 export { cosmosQuery, cosmosTx } from './cosmos.js';
 export { getAvailableModules, getModuleSubcommands, getSubcommandUsage, getSupportedModules, isSubcommandSupported } from './modules.js';
-export { KeplrWalletProvider, MnemonicWalletProvider } from './wallet/index.js';
+export { MnemonicWalletProvider } from './wallet/index.js';
 
 /**
  * Tool definitions for the MCP server

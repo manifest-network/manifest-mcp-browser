@@ -23,7 +23,7 @@ npm run test:watch    # Run tests in watch mode
 ### Entry Points
 
 - `src/index.ts` - Main entry point, exports `ManifestMCPServer` class and all public APIs
-- `src/browser.ts` - Browser-specific entry with `createBrowserServer()` and `createMnemonicServer()` factory functions
+- `src/browser.ts` - Browser-specific entry with `createMnemonicServer()` factory function
 
 ### Core Components
 
@@ -38,8 +38,8 @@ npm run test:watch    # Run tests in watch mode
 
 **Wallet Providers** (`src/wallet/`)
 - `WalletProvider` interface defines `getAddress()` and `getSigner()` methods (wallet-agnostic)
-- `KeplrWalletProvider` - Browser wallet integration with chain suggestion support
-- `MnemonicWalletProvider` - Uses `DirectSecp256k1HdWallet` for non-interactive/testing use
+- Any wallet providing `OfflineSigner` works (cosmos-kit, Web3Auth, Keplr, Leap, etc.)
+- `MnemonicWalletProvider` - Built-in provider using `DirectSecp256k1HdWallet` for testing
 
 ### Query/Transaction Routing
 
