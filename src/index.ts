@@ -16,12 +16,70 @@ import {
 } from './types.js';
 import { createValidatedConfig } from './config.js';
 
+/**
+ * Sensitive field names that should be redacted from error responses
+ */
+const SENSITIVE_FIELDS = new Set([
+  'mnemonic',
+  'privatekey',
+  'private_key',
+  'secret',
+  'password',
+  'seed',
+  'key',
+  'token',
+  'apikey',
+  'api_key',
+]);
+
+/**
+ * Recursively sanitize an object by redacting sensitive fields
+ */
+function sanitizeForLogging(obj: unknown, depth = 0): unknown {
+  // Prevent infinite recursion
+  if (depth > 10) {
+    return '[max depth exceeded]';
+  }
+
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (typeof obj === 'string') {
+    // Redact strings that look like mnemonics (12 or 24 words)
+    const wordCount = obj.trim().split(/\s+/).length;
+    if (wordCount === 12 || wordCount === 24) {
+      return '[REDACTED - possible mnemonic]';
+    }
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => sanitizeForLogging(item, depth + 1));
+  }
+
+  if (typeof obj === 'object') {
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      const lowerKey = key.toLowerCase();
+      if (SENSITIVE_FIELDS.has(lowerKey)) {
+        sanitized[key] = '[REDACTED]';
+      } else {
+        sanitized[key] = sanitizeForLogging(value, depth + 1);
+      }
+    }
+    return sanitized;
+  }
+
+  return obj;
+}
+
 // Re-export types and utilities
 export * from './types.js';
 export { createConfig, createValidatedConfig, validateConfig, parseGasPrice } from './config.js';
 export { CosmosClientManager } from './client.js';
 export { cosmosQuery, cosmosTx } from './cosmos.js';
-export { getAvailableModules, getModuleSubcommands, getSupportedModules, isSubcommandSupported } from './modules.js';
+export { getAvailableModules, getModuleSubcommands, getSubcommandUsage, getSupportedModules, isSubcommandSupported } from './modules.js';
 export { KeplrWalletProvider, MnemonicWalletProvider } from './wallet/index.js';
 
 /**
@@ -179,13 +237,32 @@ export class ManifestMCPServer {
       try {
         return await this.handleToolCall(toolName, toolInput);
       } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        // Build detailed error response with sanitized inputs
+        let errorResponse: Record<string, unknown> = {
+          error: true,
+          tool: toolName,
+          input: sanitizeForLogging(toolInput),
+        };
+
+        if (error instanceof ManifestMCPError) {
+          errorResponse = {
+            ...errorResponse,
+            code: error.code,
+            message: error.message,
+            details: sanitizeForLogging(error.details),
+          };
+        } else {
+          errorResponse = {
+            ...errorResponse,
+            message: error instanceof Error ? error.message : String(error),
+          };
+        }
+
         return {
           content: [
             {
               type: 'text',
-              text: `Error: ${errorMessage}`,
+              text: JSON.stringify(errorResponse, null, 2),
             },
           ],
           isError: true,
@@ -206,7 +283,6 @@ export class ManifestMCPServer {
         const address = await this.walletProvider.getAddress();
         const accountInfo: AccountInfo = {
           address,
-          walletType: this.walletProvider.type,
         };
         return {
           content: [

@@ -17,21 +17,16 @@ export interface ManifestMCPConfig {
 }
 
 /**
- * Supported wallet types
- */
-export type WalletType = 'keplr' | 'mnemonic';
-
-/**
  * Wallet provider interface for different wallet implementations
+ *
+ * Any wallet that provides an OfflineSigner works (Keplr, Web3Auth, Leap, cosmos-kit, etc.)
  */
 export interface WalletProvider {
-  /** The type of wallet provider */
-  readonly type: WalletType;
   /** Get the wallet's address */
   getAddress(): Promise<string>;
   /** Get the offline signer for signing transactions */
   getSigner(): Promise<OfflineSigner>;
-  /** Optional: Connect to the wallet (for Keplr) */
+  /** Optional: Connect to the wallet */
   connect?(): Promise<void>;
   /** Optional: Disconnect from the wallet */
   disconnect?(): Promise<void>;
@@ -68,6 +63,7 @@ export interface CosmosTxResult {
 export interface ModuleInfo {
   readonly name: string;
   readonly description: string;
+  readonly args?: string; // Usage hint for arguments
 }
 
 /**
@@ -153,5 +149,4 @@ export class ManifestMCPError extends Error {
  */
 export interface AccountInfo {
   readonly address: string;
-  readonly walletType: WalletType;
 }

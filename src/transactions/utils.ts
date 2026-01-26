@@ -17,13 +17,30 @@ export function parseBigInt(value: string, fieldName: string): bigint {
 
 /**
  * Parse amount string into coin (e.g., "1000umfx" -> { amount: "1000", denom: "umfx" })
+ * Supports simple denoms (umfx), IBC denoms (ibc/...), and factory denoms (factory/creator/subdenom)
  */
 export function parseAmount(amountStr: string): { amount: string; denom: string } {
-  const match = amountStr.match(/^(\d+)([a-zA-Z][a-zA-Z0-9]*)$/);
+  // Regex supports alphanumeric denoms with slashes and underscores for IBC/factory denoms
+  const match = amountStr.match(/^(\d+)([a-zA-Z][a-zA-Z0-9/_]*)$/);
   if (!match) {
+    // Provide specific hints based on common mistakes
+    let hint = '';
+    if (!amountStr || amountStr.trim() === '') {
+      hint = ' Received empty string.';
+    } else if (amountStr.includes(' ')) {
+      hint = ' Remove the space between number and denom.';
+    } else if (amountStr.includes(',')) {
+      hint = ' Do not use commas in the number.';
+    } else if (/^\d+$/.test(amountStr)) {
+      hint = ' Missing denomination (e.g., add "umfx" after the number).';
+    } else if (/^[a-zA-Z]/.test(amountStr)) {
+      hint = ' Amount must start with a number, not the denomination.';
+    }
+
     throw new ManifestMCPError(
       ManifestMCPErrorCode.TX_FAILED,
-      `Invalid amount format: ${amountStr}. Expected format: <number><denom> (e.g., "1000umfx")`
+      `Invalid amount format: "${amountStr}".${hint} Expected format: <number><denom> (e.g., "1000000umfx" or "1000000factory/address/subdenom")`,
+      { receivedValue: amountStr, expectedFormat: '<number><denom>', example: '1000000umfx' }
     );
   }
   return { amount: match[1], denom: match[2] };

@@ -8,6 +8,7 @@ import { ModuleInfo, AvailableModules, ManifestMCPError, ManifestMCPErrorCode } 
 interface SubcommandInfo {
   name: string;
   description: string;
+  args?: string; // Usage hint for arguments
 }
 
 interface ModuleRegistry {
@@ -119,8 +120,8 @@ const TX_MODULES: ModuleRegistry = {
   bank: {
     description: 'Bank transaction subcommands',
     subcommands: [
-      { name: 'send', description: 'Send tokens to another account' },
-      { name: 'multi-send', description: 'Send tokens to multiple accounts' },
+      { name: 'send', description: 'Send tokens to another account', args: '<to-address> <amount> (e.g., manifest1abc... 1000000umfx)' },
+      { name: 'multi-send', description: 'Send tokens to multiple accounts', args: '<to-address:amount>... (e.g., manifest1a:1000umfx manifest1b:2000umfx)' },
     ],
   },
   staking: {
@@ -151,10 +152,10 @@ const TX_MODULES: ModuleRegistry = {
   billing: {
     description: 'Manifest billing transaction subcommands',
     subcommands: [
-      { name: 'fund-credit', description: 'Fund credit for a tenant' },
-      { name: 'create-lease', description: 'Create a new lease' },
-      { name: 'close-lease', description: 'Close one or more leases' },
-      { name: 'withdraw', description: 'Withdraw earnings from leases' },
+      { name: 'fund-credit', description: 'Fund credit for a tenant', args: '<tenant-address> <amount> (e.g., manifest1abc... 1000000umfx)' },
+      { name: 'create-lease', description: 'Create a new lease', args: '<sku-uuid:quantity>... (e.g., sku-123:1 sku-456:2)' },
+      { name: 'close-lease', description: 'Close one or more leases', args: '<lease-uuid>... (e.g., lease-123 lease-456)' },
+      { name: 'withdraw', description: 'Withdraw earnings from leases', args: '<lease-uuid>... OR --provider <provider-uuid>' },
     ],
   },
   manifest: {
@@ -211,6 +212,7 @@ export function getModuleSubcommands(
   return moduleInfo.subcommands.map((sub) => ({
     name: sub.name,
     description: sub.description,
+    args: sub.args,
   }));
 }
 
@@ -230,6 +232,26 @@ export function isSubcommandSupported(
   }
 
   return moduleInfo.subcommands.some((s) => s.name === subcommand);
+}
+
+/**
+ * Get usage help for a specific subcommand
+ * Returns the args string if available, or undefined
+ */
+export function getSubcommandUsage(
+  type: 'query' | 'tx',
+  module: string,
+  subcommand: string
+): string | undefined {
+  const registry = type === 'query' ? QUERY_MODULES : TX_MODULES;
+  const moduleInfo = registry[module];
+
+  if (!moduleInfo) {
+    return undefined;
+  }
+
+  const sub = moduleInfo.subcommands.find((s) => s.name === subcommand);
+  return sub?.args;
 }
 
 /**

@@ -1,15 +1,18 @@
 import { DirectSecp256k1HdWallet, OfflineSigner } from '@cosmjs/proto-signing';
-import { WalletProvider, WalletType, ManifestMCPError, ManifestMCPErrorCode, ManifestMCPConfig } from '../types.js';
+import { WalletProvider, ManifestMCPError, ManifestMCPErrorCode, ManifestMCPConfig } from '../types.js';
 
 /**
  * Mnemonic-based wallet provider for non-browser environments or testing
+ *
+ * SECURITY NOTE: The mnemonic is stored in memory until disconnect() is called.
+ * After disconnect(), the wallet cannot be reconnected - create a new instance instead.
  */
 export class MnemonicWalletProvider implements WalletProvider {
-  public readonly type: WalletType = 'mnemonic';
   private config: ManifestMCPConfig;
-  private mnemonic: string;
+  private mnemonic: string | null;
   private wallet: DirectSecp256k1HdWallet | null = null;
   private address: string | null = null;
+  private disconnected: boolean = false;
 
   constructor(config: ManifestMCPConfig, mnemonic: string) {
     this.config = config;
@@ -20,8 +23,22 @@ export class MnemonicWalletProvider implements WalletProvider {
    * Initialize the wallet from the mnemonic
    */
   private async initWallet(): Promise<void> {
+    if (this.disconnected) {
+      throw new ManifestMCPError(
+        ManifestMCPErrorCode.WALLET_NOT_CONNECTED,
+        'Wallet has been disconnected and cannot be reconnected. Create a new MnemonicWalletProvider instance.'
+      );
+    }
+
     if (this.wallet) {
       return;
+    }
+
+    if (!this.mnemonic) {
+      throw new ManifestMCPError(
+        ManifestMCPErrorCode.WALLET_NOT_CONNECTED,
+        'Mnemonic has been cleared. Create a new MnemonicWalletProvider instance.'
+      );
     }
 
     const prefix = this.config.addressPrefix ?? 'manifest';
@@ -53,11 +70,19 @@ export class MnemonicWalletProvider implements WalletProvider {
   }
 
   /**
-   * Disconnect (clear) the wallet
+   * Disconnect and securely clear all sensitive data
+   *
+   * IMPORTANT: After calling disconnect(), this wallet instance cannot be reused.
+   * Create a new MnemonicWalletProvider instance if you need to reconnect.
    */
   async disconnect(): Promise<void> {
+    // Clear the mnemonic by overwriting with empty string then nullifying
+    // Note: JavaScript strings are immutable, so we can't truly zero the memory,
+    // but we can remove all references to allow garbage collection
+    this.mnemonic = null;
     this.wallet = null;
     this.address = null;
+    this.disconnected = true;
   }
 
   /**

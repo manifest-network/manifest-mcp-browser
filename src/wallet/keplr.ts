@@ -1,6 +1,6 @@
 import type { OfflineSigner } from '@cosmjs/proto-signing';
 import type { Window as KeplrWindow, ChainInfo } from '@keplr-wallet/types';
-import { WalletProvider, WalletType, ManifestMCPError, ManifestMCPErrorCode, ManifestMCPConfig } from '../types.js';
+import { WalletProvider, ManifestMCPError, ManifestMCPErrorCode, ManifestMCPConfig } from '../types.js';
 
 declare global {
   interface Window extends KeplrWindow {}
@@ -10,7 +10,6 @@ declare global {
  * Keplr wallet provider for browser environments
  */
 export class KeplrWalletProvider implements WalletProvider {
-  public readonly type: WalletType = 'keplr';
   private config: ManifestMCPConfig;
   private address: string | null = null;
   private signer: OfflineSigner | null = null;

@@ -177,11 +177,20 @@ export async function cosmosTx(
     }
   } catch (error) {
     if (error instanceof ManifestMCPError) {
+      // Re-throw with enriched context if not already present
+      if (!error.details?.module) {
+        throw new ManifestMCPError(
+          error.code,
+          error.message,
+          { ...error.details, module, subcommand, args }
+        );
+      }
       throw error;
     }
     throw new ManifestMCPError(
       ManifestMCPErrorCode.TX_FAILED,
-      `Tx ${module} ${subcommand} failed: ${error instanceof Error ? error.message : String(error)}`
+      `Tx ${module} ${subcommand} failed: ${error instanceof Error ? error.message : String(error)}`,
+      { module, subcommand, args }
     );
   }
 }

@@ -2,6 +2,7 @@ import { SigningStargateClient } from '@cosmjs/stargate';
 import { liftedinit } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
 import { parseAmount, buildTxResult, parseBigInt } from './utils.js';
+import { getSubcommandUsage } from '../modules.js';
 
 const { MsgFundCredit, MsgCreateLease, MsgCloseLease, MsgWithdraw } = liftedinit.billing.v1;
 
@@ -19,13 +20,25 @@ export async function routeBillingTransaction(
   switch (subcommand) {
     case 'fund-credit': {
       if (args.length < 2) {
+        const usage = getSubcommandUsage('tx', 'billing', 'fund-credit');
         throw new ManifestMCPError(
           ManifestMCPErrorCode.TX_FAILED,
-          'fund-credit requires tenant-address and amount arguments'
+          `fund-credit requires tenant-address and amount arguments. Received ${args.length} argument(s): [${args.map(a => `"${a}"`).join(', ')}]. Usage: fund-credit ${usage || '<tenant-address> <amount>'}`,
+          { receivedArgs: args, expectedArgs: ['tenant-address', 'amount'], usage }
         );
       }
 
       const [tenant, amountStr] = args;
+
+      // Validate tenant address format
+      if (!tenant.startsWith('manifest1')) {
+        throw new ManifestMCPError(
+          ManifestMCPErrorCode.TX_FAILED,
+          `Invalid tenant address: "${tenant}". Expected a manifest address starting with "manifest1". Received args: [${args.map(a => `"${a}"`).join(', ')}]`,
+          { receivedArgs: args, receivedTenant: tenant }
+        );
+      }
+
       const { amount, denom } = parseAmount(amountStr);
 
       const msg = {
@@ -43,9 +56,11 @@ export async function routeBillingTransaction(
 
     case 'create-lease': {
       if (args.length < 1) {
+        const usage = getSubcommandUsage('tx', 'billing', 'create-lease');
         throw new ManifestMCPError(
           ManifestMCPErrorCode.TX_FAILED,
-          'create-lease requires at least one sku-uuid:quantity pair'
+          `create-lease requires at least one sku-uuid:quantity pair. Usage: create-lease ${usage || '<sku-uuid:quantity>...'}`,
+          { usage }
         );
       }
 
@@ -75,9 +90,11 @@ export async function routeBillingTransaction(
 
     case 'close-lease': {
       if (args.length < 1) {
+        const usage = getSubcommandUsage('tx', 'billing', 'close-lease');
         throw new ManifestMCPError(
           ManifestMCPErrorCode.TX_FAILED,
-          'close-lease requires at least one lease-uuid argument'
+          `close-lease requires at least one lease-uuid argument. Usage: close-lease ${usage || '<lease-uuid>...'}`,
+          { usage }
         );
       }
 
@@ -100,9 +117,11 @@ export async function routeBillingTransaction(
 
     case 'withdraw': {
       if (args.length < 1) {
+        const usage = getSubcommandUsage('tx', 'billing', 'withdraw');
         throw new ManifestMCPError(
           ManifestMCPErrorCode.TX_FAILED,
-          'withdraw requires at least one lease-uuid argument or provider-uuid with --provider flag'
+          `withdraw requires at least one lease-uuid argument or provider-uuid with --provider flag. Usage: withdraw ${usage || '<lease-uuid>... OR --provider <provider-uuid>'}`,
+          { usage }
         );
       }
 

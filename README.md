@@ -82,7 +82,7 @@ const server = new ManifestMCPServer({
 
 The server exposes the same five tools as `manifest-mcp`:
 
-1. **get_account_info** - Get account address and wallet type
+1. **get_account_info** - Get the wallet's account address
 2. **cosmos_query** - Execute any supported Cosmos SDK query
 3. **cosmos_tx** - Execute any supported Cosmos SDK transaction
 4. **list_modules** - List available query and transaction modules
@@ -214,6 +214,47 @@ The RPC endpoint must allow cross-origin requests for browser usage. If you enco
 1. Use an RPC endpoint that allows CORS
 2. Set up a CORS proxy
 3. Configure your own RPC node to allow CORS
+
+## Security
+
+### Key Handling
+
+**KeplrWalletProvider (Recommended for browsers)**
+- Private keys never leave the Keplr extension
+- Only the signing interface is exposed to the application
+- User must approve each transaction in the Keplr popup
+- No sensitive data stored in application memory
+
+**MnemonicWalletProvider (For testing/non-interactive use)**
+- Mnemonic is stored in memory during the wallet's lifetime
+- Calling `disconnect()` clears the mnemonic and prevents reconnection
+- After disconnect, create a new `MnemonicWalletProvider` instance if needed
+- Not recommended for production browser applications
+
+### Best Practices
+
+1. **Never hardcode mnemonics** - Use environment variables or secure vaults
+2. **Use Keplr in browsers** - Let users control their own keys
+3. **Call disconnect() when done** - Ensures sensitive data is cleared from memory
+4. **Limit mnemonic scope** - Use dedicated wallets for testing with minimal funds
+
+### Error Response Sanitization
+
+Error responses automatically redact sensitive fields to prevent accidental exposure:
+- Fields named `mnemonic`, `privateKey`, `secret`, `password`, `seed`, `key`, `token`, `apiKey` are replaced with `[REDACTED]`
+- Strings that appear to be mnemonics (12 or 24 words) are replaced with `[REDACTED - possible mnemonic]`
+
+```typescript
+// Example: If an error occurs with sensitive input
+// Input: { mnemonic: "word1 word2 ... word12" }
+// Error response shows: { mnemonic: "[REDACTED]" }
+```
+
+### Browser Security Considerations
+
+- This package makes RPC calls to blockchain nodes - ensure you trust the RPC endpoint
+- In browser environments, use HTTPS RPC endpoints to prevent MITM attacks
+- Consider Content Security Policy (CSP) headers to restrict allowed endpoints
 
 ## License
 
