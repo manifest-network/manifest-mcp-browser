@@ -129,6 +129,9 @@ interface ManifestMCPConfig {
   gasPrice: string;       // Gas price with denomination (e.g., "1.0umfx")
   gasAdjustment?: number; // Gas adjustment multiplier (default: 1.3)
   addressPrefix?: string; // Address prefix (default: "manifest")
+  rateLimit?: {
+    requestsPerSecond?: number; // Max RPC requests per second (default: 10)
+  };
 }
 ```
 
@@ -265,11 +268,13 @@ All inputs are validated to prevent common attack vectors:
 - **Args count**: Limited to 100 arguments per call
 - **BigInt parsing**: Empty strings rejected (prevents silent 0n values)
 - **Hex strings**: Validated format and length for address-bytes queries
+- **HTTPS enforcement**: RPC URLs must use HTTPS (HTTP only allowed for localhost/127.0.0.1/::1)
 
 ### Resource Limits
 
 Built-in protections against resource exhaustion:
 
+- **Rate limiting**: RPC requests throttled to 10/second by default (configurable)
 - **Pagination**: All list queries default to 100 items max
 - **Broadcast timeout**: Transactions timeout after 60 seconds
 - **Poll interval**: Transaction confirmation polled every 3 seconds

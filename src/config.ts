@@ -11,15 +11,47 @@ const DEFAULT_GAS_ADJUSTMENT = 1.3;
 const DEFAULT_ADDRESS_PREFIX = 'manifest';
 
 /**
- * Validate a URL string
+ * Default requests per second for rate limiting
  */
-function isValidUrl(url: string): boolean {
-  try {
-    new URL(url);
+export const DEFAULT_REQUESTS_PER_SECOND = 10;
+
+/**
+ * Check if a hostname is localhost (IPv4, IPv6, or hostname)
+ * Handles both bracketed and unbracketed IPv6 formats
+ */
+function isLocalhostHostname(hostname: string): boolean {
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return true;
-  } catch {
-    return false;
   }
+  // Handle IPv6 localhost - hostname may be '::1' or '[::1]' depending on environment
+  const normalizedHostname = hostname.replace(/^\[|\]$/g, '');
+  return normalizedHostname === '::1';
+}
+
+/**
+ * Validate URL format and check if it uses HTTPS or is localhost (HTTP allowed for local dev)
+ * Returns validation result with error reason if invalid
+ */
+function validateRpcUrl(url: string): { valid: boolean; reason?: string } {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { valid: false, reason: 'rpcUrl must be a valid URL' };
+  }
+
+  if (parsed.protocol === 'https:') {
+    return { valid: true };
+  }
+
+  if (parsed.protocol === 'http:' && isLocalhostHostname(parsed.hostname)) {
+    return { valid: true }; // HTTP allowed for localhost
+  }
+
+  return {
+    valid: false,
+    reason: `RPC URL must use HTTPS (got ${parsed.protocol}//). HTTP is only allowed for local development (localhost, 127.0.0.1, ::1).`,
+  };
 }
 
 /**
@@ -48,6 +80,9 @@ export function createConfig(input: ManifestMCPConfig): ManifestMCPConfig {
     gasPrice: input.gasPrice,
     gasAdjustment: input.gasAdjustment ?? DEFAULT_GAS_ADJUSTMENT,
     addressPrefix: input.addressPrefix ?? DEFAULT_ADDRESS_PREFIX,
+    rateLimit: {
+      requestsPerSecond: input.rateLimit?.requestsPerSecond ?? DEFAULT_REQUESTS_PER_SECOND,
+    },
   };
 }
 
@@ -74,8 +109,11 @@ export function validateConfig(config: Partial<ManifestMCPConfig>): ValidationRe
 
   if (!config.rpcUrl) {
     errors.push('rpcUrl is required');
-  } else if (!isValidUrl(config.rpcUrl)) {
-    errors.push('rpcUrl must be a valid URL');
+  } else {
+    const urlCheck = validateRpcUrl(config.rpcUrl);
+    if (!urlCheck.valid) {
+      errors.push(urlCheck.reason!);
+    }
   }
 
   if (!config.gasPrice) {
@@ -94,6 +132,20 @@ export function validateConfig(config: Partial<ManifestMCPConfig>): ValidationRe
   if (config.addressPrefix !== undefined) {
     if (!/^[a-z]+$/.test(config.addressPrefix)) {
       errors.push('addressPrefix must be lowercase letters only');
+    }
+  }
+
+  if (config.rateLimit !== undefined) {
+    if (typeof config.rateLimit !== 'object' || config.rateLimit === null || Array.isArray(config.rateLimit)) {
+      errors.push('rateLimit must be a plain object');
+    } else if (config.rateLimit.requestsPerSecond !== undefined) {
+      if (
+        typeof config.rateLimit.requestsPerSecond !== 'number' ||
+        config.rateLimit.requestsPerSecond <= 0 ||
+        !Number.isInteger(config.rateLimit.requestsPerSecond)
+      ) {
+        errors.push('rateLimit.requestsPerSecond must be a positive integer');
+      }
     }
   }
 

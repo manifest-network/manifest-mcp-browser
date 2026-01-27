@@ -1,6 +1,14 @@
 import type { OfflineSigner } from '@cosmjs/proto-signing';
 
 /**
+ * Rate limiting configuration
+ */
+export interface RateLimitConfig {
+  /** Maximum requests per second (default: 10) */
+  readonly requestsPerSecond?: number;
+}
+
+/**
  * Configuration for the Manifest MCP Browser server
  */
 export interface ManifestMCPConfig {
@@ -14,6 +22,8 @@ export interface ManifestMCPConfig {
   readonly gasAdjustment?: number;
   /** Address prefix (e.g., "manifest") */
   readonly addressPrefix?: string;
+  /** Rate limiting configuration */
+  readonly rateLimit?: RateLimitConfig;
 }
 
 /**

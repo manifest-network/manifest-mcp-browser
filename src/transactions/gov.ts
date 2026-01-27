@@ -136,6 +136,16 @@ export async function routeGovTransaction(
         return { option, weight };
       });
 
+      // Validate that weights sum to exactly 1.0 (10^18 in fixed-point)
+      const totalWeight = options.reduce((sum, opt) => sum + BigInt(opt.weight), BigInt(0));
+      const oneInFixed18 = BigInt('1000000000000000000'); // 10^18
+      if (totalWeight !== oneInFixed18) {
+        throw new ManifestMCPError(
+          ManifestMCPErrorCode.TX_FAILED,
+          `Weighted vote options must sum to exactly 1.0. Got ${Number(totalWeight) / 1e18} (${options.map(o => o.weight).join(' + ')} = ${totalWeight})`
+        );
+      }
+
       const msg = {
         typeUrl: '/cosmos.gov.v1.MsgVoteWeighted',
         value: MsgVoteWeighted.fromPartial({

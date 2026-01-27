@@ -47,6 +47,9 @@ export async function cosmosQuery(
   validateName(module, 'module');
   validateName(subcommand, 'subcommand');
 
+  // Apply rate limiting before making RPC request
+  await clientManager.acquireRateLimit();
+
   const queryClient = await clientManager.getQueryClient();
 
   let result: Record<string, unknown>;
@@ -107,6 +110,9 @@ export async function cosmosTx(
 ): Promise<CosmosTxResult> {
   validateName(module, 'module');
   validateName(subcommand, 'subcommand');
+
+  // Apply rate limiting before making RPC request
+  await clientManager.acquireRateLimit();
 
   const signingClient = await clientManager.getSigningClient();
   const senderAddress = await clientManager.getAddress();

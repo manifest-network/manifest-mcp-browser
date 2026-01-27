@@ -12,7 +12,9 @@ import {
 } from '@manifest-network/manifestjs';
 import { Registry } from '@cosmjs/proto-signing';
 import { AminoTypes } from '@cosmjs/stargate';
+import { RateLimiter } from 'limiter';
 import { ManifestMCPConfig, WalletProvider, ManifestMCPError, ManifestMCPErrorCode } from './types.js';
+import { DEFAULT_REQUESTS_PER_SECOND } from './config.js';
 
 // Type for the RPC query client from manifestjs liftedinit bundle
 // This includes cosmos modules + liftedinit-specific modules (billing, manifest, sku)
@@ -55,14 +57,23 @@ export class CosmosClientManager {
   private walletProvider: WalletProvider;
   private queryClient: ManifestQueryClient | null = null;
   private signingClient: SigningStargateClient | null = null;
+  private rateLimiter: RateLimiter;
 
   private constructor(config: ManifestMCPConfig, walletProvider: WalletProvider) {
     this.config = config;
     this.walletProvider = walletProvider;
+
+    // Initialize rate limiter with configured or default requests per second
+    const requestsPerSecond = config.rateLimit?.requestsPerSecond ?? DEFAULT_REQUESTS_PER_SECOND;
+    this.rateLimiter = new RateLimiter({
+      tokensPerInterval: requestsPerSecond,
+      interval: 'second',
+    });
   }
 
   /**
-   * Get or create a singleton instance for the given config
+   * Get or create a singleton instance for the given config.
+   * If an instance exists with different rate limit settings, the limiter is updated.
    */
   static getInstance(
     config: ManifestMCPConfig,
@@ -74,6 +85,34 @@ export class CosmosClientManager {
     if (!instance) {
       instance = new CosmosClientManager(config, walletProvider);
       CosmosClientManager.instances.set(key, instance);
+    } else {
+      // Check if config or wallet changed and update accordingly
+      const configChanged =
+        instance.config.gasPrice !== config.gasPrice ||
+        instance.config.gasAdjustment !== config.gasAdjustment ||
+        instance.config.addressPrefix !== config.addressPrefix ||
+        instance.config.rateLimit?.requestsPerSecond !== config.rateLimit?.requestsPerSecond;
+
+      const walletChanged = instance.walletProvider !== walletProvider;
+
+      if (configChanged || walletChanged) {
+        // Update config and wallet
+        instance.config = config;
+        instance.walletProvider = walletProvider;
+
+        // Invalidate signing client so it gets recreated with new config/wallet
+        if (instance.signingClient) {
+          instance.signingClient.disconnect();
+          instance.signingClient = null;
+        }
+
+        // Update rate limiter
+        const newRps = config.rateLimit?.requestsPerSecond ?? DEFAULT_REQUESTS_PER_SECOND;
+        instance.rateLimiter = new RateLimiter({
+          tokensPerInterval: newRps,
+          interval: 'second',
+        });
+      }
     }
 
     return instance;
@@ -163,6 +202,14 @@ export class CosmosClientManager {
    */
   getConfig(): ManifestMCPConfig {
     return this.config;
+  }
+
+  /**
+   * Acquire a rate limit token before making an RPC request.
+   * This will wait if the rate limit has been exceeded.
+   */
+  async acquireRateLimit(): Promise<void> {
+    await this.rateLimiter.removeTokens(1);
   }
 
   /**

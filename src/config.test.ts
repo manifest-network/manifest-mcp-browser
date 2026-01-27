@@ -29,6 +29,28 @@ describe('createConfig', () => {
     expect(config.gasAdjustment).toBe(2.0);
     expect(config.addressPrefix).toBe('custom');
   });
+
+  it('should apply default rateLimit', () => {
+    const config = createConfig({
+      chainId: 'test-chain',
+      rpcUrl: 'https://example.com',
+      gasPrice: '1.0umfx',
+    });
+
+    expect(config.rateLimit).toBeDefined();
+    expect(config.rateLimit?.requestsPerSecond).toBe(10);
+  });
+
+  it('should preserve provided rateLimit', () => {
+    const config = createConfig({
+      chainId: 'test-chain',
+      rpcUrl: 'https://example.com',
+      gasPrice: '1.0umfx',
+      rateLimit: { requestsPerSecond: 20 },
+    });
+
+    expect(config.rateLimit?.requestsPerSecond).toBe(20);
+  });
 });
 
 describe('validateConfig', () => {
@@ -107,6 +129,140 @@ describe('validateConfig', () => {
 
     expect(result.valid).toBe(false);
     expect(result.errors.some(e => e.includes('addressPrefix'))).toBe(true);
+  });
+
+  it('should accept HTTPS URLs', () => {
+    const result = validateConfig({
+      chainId: 'test',
+      rpcUrl: 'https://rpc.example.com',
+      gasPrice: '1.0umfx',
+    });
+
+    expect(result.valid).toBe(true);
+  });
+
+  it('should accept HTTP URLs for localhost', () => {
+    const result = validateConfig({
+      chainId: 'test',
+      rpcUrl: 'http://localhost:26657',
+      gasPrice: '1.0umfx',
+    });
+
+    expect(result.valid).toBe(true);
+  });
+
+  it('should accept HTTP URLs for 127.0.0.1', () => {
+    const result = validateConfig({
+      chainId: 'test',
+      rpcUrl: 'http://127.0.0.1:26657',
+      gasPrice: '1.0umfx',
+    });
+
+    expect(result.valid).toBe(true);
+  });
+
+  it('should accept HTTP URLs for IPv6 localhost', () => {
+    const result = validateConfig({
+      chainId: 'test',
+      rpcUrl: 'http://[::1]:26657',
+      gasPrice: '1.0umfx',
+    });
+
+    expect(result.valid).toBe(true);
+  });
+
+  it('should reject HTTP URLs for non-localhost', () => {
+    const result = validateConfig({
+      chainId: 'test',
+      rpcUrl: 'http://rpc.example.com',
+      gasPrice: '1.0umfx',
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('HTTPS'))).toBe(true);
+  });
+
+  it('should accept valid rateLimit config', () => {
+    const result = validateConfig({
+      chainId: 'test',
+      rpcUrl: 'https://example.com',
+      gasPrice: '1.0umfx',
+      rateLimit: { requestsPerSecond: 5 },
+    });
+
+    expect(result.valid).toBe(true);
+  });
+
+  it('should reject non-integer rateLimit.requestsPerSecond', () => {
+    const result = validateConfig({
+      chainId: 'test',
+      rpcUrl: 'https://example.com',
+      gasPrice: '1.0umfx',
+      rateLimit: { requestsPerSecond: 5.5 },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('requestsPerSecond'))).toBe(true);
+  });
+
+  it('should reject negative rateLimit.requestsPerSecond', () => {
+    const result = validateConfig({
+      chainId: 'test',
+      rpcUrl: 'https://example.com',
+      gasPrice: '1.0umfx',
+      rateLimit: { requestsPerSecond: -1 },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('requestsPerSecond'))).toBe(true);
+  });
+
+  it('should reject zero rateLimit.requestsPerSecond', () => {
+    const result = validateConfig({
+      chainId: 'test',
+      rpcUrl: 'https://example.com',
+      gasPrice: '1.0umfx',
+      rateLimit: { requestsPerSecond: 0 },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('requestsPerSecond'))).toBe(true);
+  });
+
+  it('should reject null rateLimit', () => {
+    const result = validateConfig({
+      chainId: 'test',
+      rpcUrl: 'https://example.com',
+      gasPrice: '1.0umfx',
+      rateLimit: null as unknown as { requestsPerSecond?: number },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('rateLimit must be a plain object'))).toBe(true);
+  });
+
+  it('should reject non-object rateLimit', () => {
+    const result = validateConfig({
+      chainId: 'test',
+      rpcUrl: 'https://example.com',
+      gasPrice: '1.0umfx',
+      rateLimit: 'invalid' as unknown as { requestsPerSecond?: number },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('rateLimit must be a plain object'))).toBe(true);
+  });
+
+  it('should reject array rateLimit', () => {
+    const result = validateConfig({
+      chainId: 'test',
+      rpcUrl: 'https://example.com',
+      gasPrice: '1.0umfx',
+      rateLimit: [] as unknown as { requestsPerSecond?: number },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('rateLimit must be a plain object'))).toBe(true);
   });
 });
 
