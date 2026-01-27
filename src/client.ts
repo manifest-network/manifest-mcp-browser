@@ -12,6 +12,7 @@ import {
 } from '@manifest-network/manifestjs';
 import { Registry } from '@cosmjs/proto-signing';
 import { AminoTypes } from '@cosmjs/stargate';
+import { RateLimiter } from 'limiter';
 import { ManifestMCPConfig, WalletProvider, ManifestMCPError, ManifestMCPErrorCode } from './types.js';
 
 // Type for the RPC query client from manifestjs liftedinit bundle
@@ -48,6 +49,9 @@ function getSigningManifestClientOptions() {
 /**
  * Manages CosmJS client instances with lazy initialization and singleton pattern
  */
+/** Default requests per second for rate limiting */
+const DEFAULT_REQUESTS_PER_SECOND = 10;
+
 export class CosmosClientManager {
   private static instances: Map<string, CosmosClientManager> = new Map();
 
@@ -55,10 +59,18 @@ export class CosmosClientManager {
   private walletProvider: WalletProvider;
   private queryClient: ManifestQueryClient | null = null;
   private signingClient: SigningStargateClient | null = null;
+  private rateLimiter: RateLimiter;
 
   private constructor(config: ManifestMCPConfig, walletProvider: WalletProvider) {
     this.config = config;
     this.walletProvider = walletProvider;
+
+    // Initialize rate limiter with configured or default requests per second
+    const requestsPerSecond = config.rateLimit?.requestsPerSecond ?? DEFAULT_REQUESTS_PER_SECOND;
+    this.rateLimiter = new RateLimiter({
+      tokensPerInterval: requestsPerSecond,
+      interval: 'second',
+    });
   }
 
   /**
@@ -163,6 +175,14 @@ export class CosmosClientManager {
    */
   getConfig(): ManifestMCPConfig {
     return this.config;
+  }
+
+  /**
+   * Acquire a rate limit token before making an RPC request.
+   * This will wait if the rate limit has been exceeded.
+   */
+  async acquireRateLimit(): Promise<void> {
+    await this.rateLimiter.removeTokens(1);
   }
 
   /**

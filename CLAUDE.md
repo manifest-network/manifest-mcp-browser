@@ -84,8 +84,10 @@ Transaction: bank, staking, distribution, gov, billing, manifest
 - Args array length limit (100 max)
 - BigInt empty string rejection (prevents silent 0n)
 - Hex string validation for address-bytes queries
+- HTTPS enforcement for RPC URLs (HTTP only allowed for localhost/127.0.0.1/::1)
 
 **Resource Limits:**
+- Rate limiting via `limiter` package (default: 10 requests/second, configurable)
 - Default pagination limit of 100 items for all list queries
 - Transaction broadcast timeout (60 seconds)
 - Broadcast poll interval (3 seconds)
