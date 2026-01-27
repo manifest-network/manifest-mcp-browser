@@ -86,15 +86,32 @@ export class CosmosClientManager {
       instance = new CosmosClientManager(config, walletProvider);
       CosmosClientManager.instances.set(key, instance);
     } else {
-      // Update rate limiter if settings changed
-      const newRps = config.rateLimit?.requestsPerSecond ?? DEFAULT_REQUESTS_PER_SECOND;
-      const currentRps = instance.config.rateLimit?.requestsPerSecond ?? DEFAULT_REQUESTS_PER_SECOND;
-      if (newRps !== currentRps) {
+      // Check if config or wallet changed and update accordingly
+      const configChanged =
+        instance.config.gasPrice !== config.gasPrice ||
+        instance.config.gasAdjustment !== config.gasAdjustment ||
+        instance.config.addressPrefix !== config.addressPrefix ||
+        instance.config.rateLimit?.requestsPerSecond !== config.rateLimit?.requestsPerSecond;
+
+      const walletChanged = instance.walletProvider !== walletProvider;
+
+      if (configChanged || walletChanged) {
+        // Update config and wallet
+        instance.config = config;
+        instance.walletProvider = walletProvider;
+
+        // Invalidate signing client so it gets recreated with new config/wallet
+        if (instance.signingClient) {
+          instance.signingClient.disconnect();
+          instance.signingClient = null;
+        }
+
+        // Update rate limiter
+        const newRps = config.rateLimit?.requestsPerSecond ?? DEFAULT_REQUESTS_PER_SECOND;
         instance.rateLimiter = new RateLimiter({
           tokensPerInterval: newRps,
           interval: 'second',
         });
-        instance.config = { ...instance.config, rateLimit: { requestsPerSecond: newRps } };
       }
     }
 

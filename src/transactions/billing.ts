@@ -15,11 +15,20 @@ const MAX_META_HASH_BYTES = 64;
  * Uses @cosmjs/encoding for hex validation and conversion
  */
 function parseMetaHash(hexString: string): Uint8Array {
-  // Check max length before parsing (64 bytes = 128 hex chars)
-  if (hexString.length > MAX_META_HASH_BYTES * 2) {
+  // Check even length first to avoid fractional byte counts in error messages
+  if (hexString.length % 2 !== 0) {
     throw new ManifestMCPError(
       ManifestMCPErrorCode.TX_FAILED,
-      `Invalid meta-hash: exceeds maximum ${MAX_META_HASH_BYTES} bytes. Got ${hexString.length / 2} bytes (${hexString.length} hex chars).`
+      `Invalid meta-hash: hex string must have even length. Got ${hexString.length} characters.`
+    );
+  }
+
+  // Check max length (64 bytes = 128 hex chars)
+  const byteLength = hexString.length / 2;
+  if (byteLength > MAX_META_HASH_BYTES) {
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.TX_FAILED,
+      `Invalid meta-hash: exceeds maximum ${MAX_META_HASH_BYTES} bytes. Got ${byteLength} bytes (${hexString.length} hex chars).`
     );
   }
 
@@ -174,7 +183,7 @@ export async function routeBillingTransaction(
       if (providerFlagIndex !== -1) {
         // Provider-wide withdrawal mode
         providerUuid = args[providerFlagIndex + 1] || '';
-        if (!providerUuid) {
+        if (!providerUuid || providerUuid.startsWith('--')) {
           throw new ManifestMCPError(
             ManifestMCPErrorCode.TX_FAILED,
             'withdraw with --provider flag requires provider-uuid argument'
@@ -184,10 +193,10 @@ export async function routeBillingTransaction(
         // Parse optional --limit flag (only valid with --provider)
         if (limitFlagIndex !== -1) {
           const limitStr = args[limitFlagIndex + 1] || '';
-          if (!limitStr) {
+          if (!limitStr || limitStr.startsWith('--')) {
             throw new ManifestMCPError(
               ManifestMCPErrorCode.TX_FAILED,
-              'withdraw with --limit flag requires a number argument'
+              'withdraw with --limit flag requires a number argument (1-100)'
             );
           }
           limit = parseBigInt(limitStr, 'limit');
