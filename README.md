@@ -1,4 +1,4 @@
-# manifest-mcp-browser
+# @manifest-network/manifest-mcp-browser
 
 Browser-compatible MCP server for Cosmos SDK blockchain interactions with Manifest Network using CosmJS.
 
@@ -7,7 +7,7 @@ This package provides the same MCP tool interface as `manifest-mcp`, but uses Co
 ## Installation
 
 ```bash
-npm install manifest-mcp-browser
+npm install @manifest-network/manifest-mcp-browser
 ```
 
 ## Development
@@ -27,7 +27,7 @@ npm run test:watch  # Run tests in watch mode
 The MCP server works with any wallet that provides an `OfflineSigner`:
 
 ```typescript
-import { ManifestMCPServer, WalletProvider } from 'manifest-mcp-browser';
+import { ManifestMCPServer, WalletProvider } from '@manifest-network/manifest-mcp-browser';
 import { OfflineSigner } from '@cosmjs/proto-signing';
 
 // Create a wallet provider from your existing signer
@@ -50,7 +50,7 @@ const server = new ManifestMCPServer({
 
 ```typescript
 import { useChain } from '@cosmos-kit/react';
-import { ManifestMCPServer, WalletProvider } from 'manifest-mcp-browser';
+import { ManifestMCPServer, WalletProvider } from '@manifest-network/manifest-mcp-browser';
 
 function MyComponent() {
   const { address, getOfflineSigner } = useChain('manifest');
@@ -76,7 +76,7 @@ function MyComponent() {
 For testing or non-interactive environments:
 
 ```typescript
-import { createMnemonicServer } from 'manifest-mcp-browser';
+import { createMnemonicServer } from '@manifest-network/manifest-mcp-browser';
 
 const server = await createMnemonicServer({
   chainId: 'manifest-ledger-testnet',
@@ -150,7 +150,7 @@ interface WalletProvider {
 Built-in provider for testing or non-interactive environments:
 
 ```typescript
-import { MnemonicWalletProvider } from 'manifest-mcp-browser';
+import { MnemonicWalletProvider } from '@manifest-network/manifest-mcp-browser';
 
 const wallet = new MnemonicWalletProvider(config, mnemonic);
 await wallet.connect();
@@ -166,7 +166,7 @@ import {
   CosmosClientManager,
   cosmosQuery,
   cosmosTx,
-} from 'manifest-mcp-browser';
+} from '@manifest-network/manifest-mcp-browser';
 
 const clientManager = CosmosClientManager.getInstance(config, walletProvider);
 
@@ -190,7 +190,7 @@ const result = await cosmosTx(
 
 ## Differences from manifest-mcp
 
-| Feature | manifest-mcp | manifest-mcp-browser |
+| Feature | manifest-mcp | @manifest-network/manifest-mcp-browser |
 |---------|--------------|---------------------|
 | Runtime | Node.js only | Browser + Node.js |
 | Blockchain access | CLI (manifestd) | CosmJS/HTTP |
@@ -202,7 +202,7 @@ const result = await cosmosTx(
 All errors are wrapped in `ManifestMCPError` with typed error codes:
 
 ```typescript
-import { ManifestMCPError, ManifestMCPErrorCode } from 'manifest-mcp-browser';
+import { ManifestMCPError, ManifestMCPErrorCode } from '@manifest-network/manifest-mcp-browser';
 
 try {
   await cosmosTx(clientManager, 'bank', 'send', ['...', '1000umfx']);

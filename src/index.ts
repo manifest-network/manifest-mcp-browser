@@ -209,7 +209,7 @@ export class ManifestMCPServer {
     // Note: Keep version in sync with package.json
     this.server = new Server(
       {
-        name: 'manifest-mcp-browser',
+        name: '@manifest-network/manifest-mcp-browser',
         version: '0.1.0',
       },
       {
@@ -453,7 +453,7 @@ export class ManifestMCPServer {
  *
  * @example
  * ```typescript
- * import { createMnemonicServer } from 'manifest-mcp-browser';
+ * import { createMnemonicServer } from '@manifest-network/manifest-mcp-browser';
  *
  * const server = await createMnemonicServer({
  *   chainId: 'manifest-ledger-testnet',

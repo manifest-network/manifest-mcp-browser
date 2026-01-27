@@ -1,5 +1,5 @@
 {
-  "name": "manifest-mcp-browser",
+  "name": "@manifest-network/manifest-mcp-browser",
   "version": "0.1.0",
   "description": "Browser-compatible MCP server for Cosmos SDK blockchain interactions with Manifest Network using CosmJS",
   "main": "dist/index.js",
