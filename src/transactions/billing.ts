@@ -79,7 +79,14 @@ export async function routeBillingTransaction(
       let metaHash: Uint8Array | undefined;
       let itemArgs = args;
 
-      if (args.length >= 2 && args[0] === '--meta-hash') {
+      if (args[0] === '--meta-hash') {
+        if (args.length < 2 || args[1].startsWith('--')) {
+          const usage = getSubcommandUsage('tx', 'billing', 'create-lease');
+          throw new ManifestMCPError(
+            ManifestMCPErrorCode.TX_FAILED,
+            `--meta-hash flag requires a hex value. Usage: create-lease ${usage ?? '<args>'}`
+          );
+        }
         const hexHash = args[1];
         // Validate and convert hex string to Uint8Array (max 64 bytes)
         metaHash = parseMetaHash(hexHash);
@@ -90,7 +97,7 @@ export async function routeBillingTransaction(
         const usage = getSubcommandUsage('tx', 'billing', 'create-lease');
         throw new ManifestMCPError(
           ManifestMCPErrorCode.TX_FAILED,
-          `create-lease requires at least one sku-uuid:quantity pair. Usage: create-lease [--meta-hash <hex>] ${usage || '<sku-uuid:quantity>...'}`,
+          `create-lease requires at least one sku-uuid:quantity pair. Usage: create-lease ${usage ?? '<args>'}`,
           { usage }
         );
       }
@@ -152,7 +159,7 @@ export async function routeBillingTransaction(
         const usage = getSubcommandUsage('tx', 'billing', 'withdraw');
         throw new ManifestMCPError(
           ManifestMCPErrorCode.TX_FAILED,
-          `withdraw requires at least one lease-uuid argument or provider-uuid with --provider flag. Usage: withdraw ${usage || '<lease-uuid>... OR --provider <provider-uuid> [--limit <n>]'}`,
+          `withdraw requires at least one lease-uuid argument or provider-uuid with --provider flag. Usage: withdraw ${usage ?? '<args>'}`,
           { usage }
         );
       }
@@ -193,13 +200,24 @@ export async function routeBillingTransaction(
         }
       } else {
         // Lease-specific withdrawal mode
-        // Filter out any flags that might have been passed by mistake
-        leaseUuids = args.filter(arg => !arg.startsWith('--'));
-
-        if (limitFlagIndex !== -1) {
+        // Check for unexpected flags
+        const unexpectedFlags = args.filter(arg => arg.startsWith('--'));
+        if (unexpectedFlags.length > 0) {
+          const usage = getSubcommandUsage('tx', 'billing', 'withdraw');
           throw new ManifestMCPError(
             ManifestMCPErrorCode.TX_FAILED,
-            '--limit flag is only valid with --provider mode'
+            `Unexpected flag(s) in lease-specific withdrawal mode: ${unexpectedFlags.join(', ')}. ` +
+            `Use --provider for provider-wide withdrawal. Usage: withdraw ${usage ?? '<args>'}`
+          );
+        }
+
+        leaseUuids = args;
+
+        if (leaseUuids.length === 0) {
+          const usage = getSubcommandUsage('tx', 'billing', 'withdraw');
+          throw new ManifestMCPError(
+            ManifestMCPErrorCode.TX_FAILED,
+            `withdraw requires at least one lease-uuid. Usage: withdraw ${usage ?? '<args>'}`
           );
         }
       }

@@ -14,6 +14,7 @@ import { Registry } from '@cosmjs/proto-signing';
 import { AminoTypes } from '@cosmjs/stargate';
 import { RateLimiter } from 'limiter';
 import { ManifestMCPConfig, WalletProvider, ManifestMCPError, ManifestMCPErrorCode } from './types.js';
+import { DEFAULT_REQUESTS_PER_SECOND } from './config.js';
 
 // Type for the RPC query client from manifestjs liftedinit bundle
 // This includes cosmos modules + liftedinit-specific modules (billing, manifest, sku)
@@ -49,9 +50,6 @@ function getSigningManifestClientOptions() {
 /**
  * Manages CosmJS client instances with lazy initialization and singleton pattern
  */
-/** Default requests per second for rate limiting */
-const DEFAULT_REQUESTS_PER_SECOND = 10;
-
 export class CosmosClientManager {
   private static instances: Map<string, CosmosClientManager> = new Map();
 

@@ -238,7 +238,7 @@ describe('validateConfig', () => {
     });
 
     expect(result.valid).toBe(false);
-    expect(result.errors.some(e => e.includes('rateLimit must be an object'))).toBe(true);
+    expect(result.errors.some(e => e.includes('rateLimit must be a plain object'))).toBe(true);
   });
 
   it('should reject non-object rateLimit', () => {
@@ -250,7 +250,19 @@ describe('validateConfig', () => {
     });
 
     expect(result.valid).toBe(false);
-    expect(result.errors.some(e => e.includes('rateLimit must be an object'))).toBe(true);
+    expect(result.errors.some(e => e.includes('rateLimit must be a plain object'))).toBe(true);
+  });
+
+  it('should reject array rateLimit', () => {
+    const result = validateConfig({
+      chainId: 'test',
+      rpcUrl: 'https://example.com',
+      gasPrice: '1.0umfx',
+      rateLimit: [] as unknown as { requestsPerSecond?: number },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('rateLimit must be a plain object'))).toBe(true);
   });
 });
 

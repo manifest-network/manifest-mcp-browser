@@ -13,7 +13,7 @@ const DEFAULT_ADDRESS_PREFIX = 'manifest';
 /**
  * Default requests per second for rate limiting
  */
-const DEFAULT_REQUESTS_PER_SECOND = 10;
+export const DEFAULT_REQUESTS_PER_SECOND = 10;
 
 /**
  * Validate a URL string
@@ -148,8 +148,8 @@ export function validateConfig(config: Partial<ManifestMCPConfig>): ValidationRe
   }
 
   if (config.rateLimit !== undefined) {
-    if (typeof config.rateLimit !== 'object' || config.rateLimit === null) {
-      errors.push('rateLimit must be an object');
+    if (typeof config.rateLimit !== 'object' || config.rateLimit === null || Array.isArray(config.rateLimit)) {
+      errors.push('rateLimit must be a plain object');
     } else if (config.rateLimit.requestsPerSecond !== undefined) {
       if (
         typeof config.rateLimit.requestsPerSecond !== 'number' ||
