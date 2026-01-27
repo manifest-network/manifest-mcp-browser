@@ -190,6 +190,9 @@ export async function routeBillingTransaction(
           );
         }
 
+        // Track consumed arg indices to detect extra arguments
+        const consumedIndices = new Set<number>([providerFlagIndex, providerFlagIndex + 1]);
+
         // Parse optional --limit flag (only valid with --provider)
         if (limitFlagIndex !== -1) {
           const limitStr = args[limitFlagIndex + 1] || '';
@@ -206,6 +209,20 @@ export async function routeBillingTransaction(
               `Invalid limit: ${limit}. Must be between 1 and 100.`
             );
           }
+          consumedIndices.add(limitFlagIndex);
+          consumedIndices.add(limitFlagIndex + 1);
+        }
+
+        // Check for any extra arguments that weren't consumed
+        const extraArgs = args.filter((_, index) => !consumedIndices.has(index));
+        if (extraArgs.length > 0) {
+          const usage = getSubcommandUsage('tx', 'billing', 'withdraw');
+          throw new ManifestMCPError(
+            ManifestMCPErrorCode.TX_FAILED,
+            `Provider-wide withdrawal does not accept additional arguments. ` +
+            `Got unexpected: ${extraArgs.map(a => `"${a}"`).join(', ')}. ` +
+            `For lease-specific withdrawal, omit --provider flag. Usage: withdraw ${usage ?? '<args>'}`
+          );
         }
       } else {
         // Lease-specific withdrawal mode

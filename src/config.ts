@@ -16,18 +16,6 @@ const DEFAULT_ADDRESS_PREFIX = 'manifest';
 export const DEFAULT_REQUESTS_PER_SECOND = 10;
 
 /**
- * Validate a URL string
- */
-function isValidUrl(url: string): boolean {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Check if a hostname is localhost (IPv4, IPv6, or hostname)
  * Handles both bracketed and unbracketed IPv6 formats
  */
@@ -41,27 +29,29 @@ function isLocalhostHostname(hostname: string): boolean {
 }
 
 /**
- * Check if URL uses HTTPS or is localhost (HTTP allowed for local dev)
+ * Validate URL format and check if it uses HTTPS or is localhost (HTTP allowed for local dev)
+ * Returns validation result with error reason if invalid
  */
-function isSecureOrLocalUrl(url: string): { secure: boolean; reason?: string } {
+function validateRpcUrl(url: string): { valid: boolean; reason?: string } {
+  let parsed: URL;
   try {
-    const parsed = new URL(url);
-
-    if (parsed.protocol === 'https:') {
-      return { secure: true };
-    }
-
-    if (parsed.protocol === 'http:' && isLocalhostHostname(parsed.hostname)) {
-      return { secure: true }; // HTTP allowed for localhost
-    }
-
-    return {
-      secure: false,
-      reason: `RPC URL must use HTTPS (got ${parsed.protocol}//). HTTP is only allowed for local development (localhost, 127.0.0.1, ::1).`,
-    };
+    parsed = new URL(url);
   } catch {
-    return { secure: false, reason: 'Invalid URL format' };
+    return { valid: false, reason: 'rpcUrl must be a valid URL' };
   }
+
+  if (parsed.protocol === 'https:') {
+    return { valid: true };
+  }
+
+  if (parsed.protocol === 'http:' && isLocalhostHostname(parsed.hostname)) {
+    return { valid: true }; // HTTP allowed for localhost
+  }
+
+  return {
+    valid: false,
+    reason: `RPC URL must use HTTPS (got ${parsed.protocol}//). HTTP is only allowed for local development (localhost, 127.0.0.1, ::1).`,
+  };
 }
 
 /**
@@ -119,12 +109,10 @@ export function validateConfig(config: Partial<ManifestMCPConfig>): ValidationRe
 
   if (!config.rpcUrl) {
     errors.push('rpcUrl is required');
-  } else if (!isValidUrl(config.rpcUrl)) {
-    errors.push('rpcUrl must be a valid URL');
   } else {
-    const securityCheck = isSecureOrLocalUrl(config.rpcUrl);
-    if (!securityCheck.secure) {
-      errors.push(securityCheck.reason!);
+    const urlCheck = validateRpcUrl(config.rpcUrl);
+    if (!urlCheck.valid) {
+      errors.push(urlCheck.reason!);
     }
   }
 
