@@ -84,23 +84,28 @@ export async function routeBillingTransaction(
     }
 
     case 'create-lease': {
-      // Parse optional --meta-hash flag
+      // Parse optional --meta-hash flag (can appear anywhere in args)
       let metaHash: Uint8Array | undefined;
-      let itemArgs = args;
+      const metaHashIndex = args.indexOf('--meta-hash');
 
-      if (args[0] === '--meta-hash') {
-        if (args.length < 2 || args[1].startsWith('--')) {
+      if (metaHashIndex !== -1) {
+        const hexHash = args[metaHashIndex + 1];
+        if (!hexHash || hexHash.startsWith('--')) {
           const usage = getSubcommandUsage('tx', 'billing', 'create-lease');
           throw new ManifestMCPError(
             ManifestMCPErrorCode.TX_FAILED,
             `--meta-hash flag requires a hex value. Usage: create-lease ${usage ?? '<args>'}`
           );
         }
-        const hexHash = args[1];
         // Validate and convert hex string to Uint8Array (max 64 bytes)
         metaHash = parseMetaHash(hexHash);
-        itemArgs = args.slice(2);
       }
+
+      // Filter out --meta-hash and its value to get item args
+      const itemArgs = args.filter((_, index) => {
+        if (metaHashIndex === -1) return true;
+        return index !== metaHashIndex && index !== metaHashIndex + 1;
+      });
 
       if (itemArgs.length < 1) {
         const usage = getSubcommandUsage('tx', 'billing', 'create-lease');
@@ -238,14 +243,6 @@ export async function routeBillingTransaction(
         }
 
         leaseUuids = args;
-
-        if (leaseUuids.length === 0) {
-          const usage = getSubcommandUsage('tx', 'billing', 'withdraw');
-          throw new ManifestMCPError(
-            ManifestMCPErrorCode.TX_FAILED,
-            `withdraw requires at least one lease-uuid. Usage: withdraw ${usage ?? '<args>'}`
-          );
-        }
       }
 
       const msg = {

@@ -65,6 +65,10 @@ export interface CosmosTxResult {
   confirmationHeight?: string;
   readonly gasUsed?: string;
   readonly gasWanted?: string;
+  readonly events?: readonly {
+    readonly type: string;
+    readonly attributes: readonly { readonly key: string; readonly value: string }[];
+  }[];
 }
 
 /**

@@ -59,6 +59,10 @@ export class CosmosClientManager {
   private signingClient: SigningStargateClient | null = null;
   private rateLimiter: RateLimiter;
 
+  // Promises to prevent concurrent client initialization (lazy init race condition)
+  private queryClientPromise: Promise<ManifestQueryClient> | null = null;
+  private signingClientPromise: Promise<SigningStargateClient> | null = null;
+
   private constructor(config: ManifestMCPConfig, walletProvider: WalletProvider) {
     this.config = config;
     this.walletProvider = walletProvider;
@@ -73,7 +77,10 @@ export class CosmosClientManager {
 
   /**
    * Get or create a singleton instance for the given config.
-   * If an instance exists with different rate limit settings, the limiter is updated.
+   * Instances are keyed by chainId:rpcUrl. For existing instances:
+   * - Config and walletProvider references are always updated
+   * - Signing client is disconnected/recreated if gasPrice or walletProvider changed
+   * - Rate limiter is updated if requestsPerSecond changed (without affecting signing client)
    */
   static getInstance(
     config: ManifestMCPConfig,
@@ -86,27 +93,30 @@ export class CosmosClientManager {
       instance = new CosmosClientManager(config, walletProvider);
       CosmosClientManager.instances.set(key, instance);
     } else {
-      // Check if config or wallet changed and update accordingly
-      const configChanged =
+      // Check what changed to determine what needs updating
+      const signingClientAffected =
         instance.config.gasPrice !== config.gasPrice ||
-        instance.config.gasAdjustment !== config.gasAdjustment ||
-        instance.config.addressPrefix !== config.addressPrefix ||
+        instance.walletProvider !== walletProvider;
+
+      const rateLimitChanged =
         instance.config.rateLimit?.requestsPerSecond !== config.rateLimit?.requestsPerSecond;
 
-      const walletChanged = instance.walletProvider !== walletProvider;
+      // Always update config reference
+      instance.config = config;
+      instance.walletProvider = walletProvider;
 
-      if (configChanged || walletChanged) {
-        // Update config and wallet
-        instance.config = config;
-        instance.walletProvider = walletProvider;
-
-        // Invalidate signing client so it gets recreated with new config/wallet
+      // Only invalidate signing client if fields it depends on changed
+      if (signingClientAffected) {
         if (instance.signingClient) {
           instance.signingClient.disconnect();
           instance.signingClient = null;
         }
+        // Also clear the promise to allow re-initialization with new config
+        instance.signingClientPromise = null;
+      }
 
-        // Update rate limiter
+      // Update rate limiter independently (doesn't affect signing client)
+      if (rateLimitChanged) {
         const newRps = config.rateLimit?.requestsPerSecond ?? DEFAULT_REQUESTS_PER_SECOND;
         instance.rateLimiter = new RateLimiter({
           tokensPerInterval: newRps,
@@ -129,28 +139,54 @@ export class CosmosClientManager {
    * Get the manifestjs RPC query client with all module extensions
    */
   async getQueryClient(): Promise<ManifestQueryClient> {
-    if (!this.queryClient) {
+    // Return cached client if available
+    if (this.queryClient) {
+      return this.queryClient;
+    }
+
+    // If initialization is already in progress, wait for it
+    if (this.queryClientPromise) {
+      return this.queryClientPromise;
+    }
+
+    // Start initialization and cache the promise to prevent concurrent init
+    this.queryClientPromise = (async () => {
       try {
         // Use liftedinit ClientFactory which includes cosmos + liftedinit modules
         this.queryClient = await liftedinit.ClientFactory.createRPCQueryClient({
           rpcEndpoint: this.config.rpcUrl,
         });
+        return this.queryClient;
       } catch (error) {
+        // Clear promise on failure so retry is possible
+        this.queryClientPromise = null;
         throw new ManifestMCPError(
           ManifestMCPErrorCode.RPC_CONNECTION_FAILED,
           `Failed to connect to RPC endpoint: ${error instanceof Error ? error.message : String(error)}`,
           { rpcUrl: this.config.rpcUrl }
         );
       }
-    }
-    return this.queryClient;
+    })();
+
+    return this.queryClientPromise;
   }
 
   /**
    * Get a signing client with all Manifest registries (for transactions)
    */
   async getSigningClient(): Promise<SigningStargateClient> {
-    if (!this.signingClient) {
+    // Return cached client if available
+    if (this.signingClient) {
+      return this.signingClient;
+    }
+
+    // If initialization is already in progress, wait for it
+    if (this.signingClientPromise) {
+      return this.signingClientPromise;
+    }
+
+    // Start initialization and cache the promise to prevent concurrent init
+    this.signingClientPromise = (async () => {
       try {
         const signer = await this.walletProvider.getSigner();
         const gasPrice = GasPrice.fromString(this.config.gasPrice);
@@ -176,7 +212,10 @@ export class CosmosClientManager {
             broadcastPollIntervalMs: DEFAULT_BROADCAST_POLL_INTERVAL_MS,
           }
         );
+        return this.signingClient;
       } catch (error) {
+        // Clear promise on failure so retry is possible
+        this.signingClientPromise = null;
         if (error instanceof ManifestMCPError) {
           throw error;
         }
@@ -186,8 +225,9 @@ export class CosmosClientManager {
           { rpcUrl: this.config.rpcUrl }
         );
       }
-    }
-    return this.signingClient;
+    })();
+
+    return this.signingClientPromise;
   }
 
   /**
@@ -220,6 +260,8 @@ export class CosmosClientManager {
       this.signingClient.disconnect();
       this.signingClient = null;
     }
+    this.signingClientPromise = null;
     this.queryClient = null;
+    this.queryClientPromise = null;
   }
 }

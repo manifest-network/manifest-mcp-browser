@@ -145,6 +145,7 @@ export function buildTxResult(
     rawLog: result.rawLog || undefined,
     gasUsed: String(result.gasUsed),
     gasWanted: String(result.gasWanted),
+    events: result.events,
   };
 
   if (waitForConfirmation) {

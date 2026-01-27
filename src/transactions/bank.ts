@@ -34,8 +34,15 @@ export async function routeBankTransaction(
       // Extract optional memo from args
       let memo = '';
       const memoIndex = args.indexOf('--memo');
-      if (memoIndex !== -1 && args[memoIndex + 1]) {
-        memo = args[memoIndex + 1];
+      if (memoIndex !== -1) {
+        const memoValue = args[memoIndex + 1];
+        if (!memoValue || memoValue.startsWith('--')) {
+          throw new ManifestMCPError(
+            ManifestMCPErrorCode.TX_FAILED,
+            '--memo flag requires a value'
+          );
+        }
+        memo = memoValue;
         validateMemo(memo);
       }
 
@@ -53,7 +60,7 @@ export async function routeBankTransaction(
     }
 
     case 'multi-send': {
-      if (args.length < 2) {
+      if (args.length < 1) {
         throw new ManifestMCPError(
           ManifestMCPErrorCode.TX_FAILED,
           'multi-send requires at least one recipient:amount pair'

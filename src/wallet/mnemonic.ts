@@ -14,6 +14,9 @@ export class MnemonicWalletProvider implements WalletProvider {
   private address: string | null = null;
   private disconnected: boolean = false;
 
+  // Promise to prevent concurrent wallet initialization (lazy init race condition)
+  private initPromise: Promise<void> | null = null;
+
   constructor(config: ManifestMCPConfig, mnemonic: string) {
     this.config = config;
     this.mnemonic = mnemonic;
@@ -30,8 +33,14 @@ export class MnemonicWalletProvider implements WalletProvider {
       );
     }
 
+    // Return if already initialized
     if (this.wallet) {
       return;
+    }
+
+    // If initialization is already in progress, wait for it
+    if (this.initPromise) {
+      return this.initPromise;
     }
 
     if (!this.mnemonic) {
@@ -41,28 +50,38 @@ export class MnemonicWalletProvider implements WalletProvider {
       );
     }
 
-    const prefix = this.config.addressPrefix ?? 'manifest';
+    // Start initialization and cache the promise to prevent concurrent init
+    this.initPromise = (async () => {
+      const prefix = this.config.addressPrefix ?? 'manifest';
 
-    try {
-      this.wallet = await DirectSecp256k1HdWallet.fromMnemonic(this.mnemonic, {
-        prefix,
-      });
+      try {
+        this.wallet = await DirectSecp256k1HdWallet.fromMnemonic(this.mnemonic!, {
+          prefix,
+        });
 
-      const accounts = await this.wallet.getAccounts();
-      if (accounts.length === 0) {
+        const accounts = await this.wallet.getAccounts();
+        if (accounts.length === 0) {
+          throw new ManifestMCPError(
+            ManifestMCPErrorCode.INVALID_MNEMONIC,
+            'No accounts derived from mnemonic'
+          );
+        }
+
+        this.address = accounts[0].address;
+      } catch (error) {
+        // Clear promise on failure so retry is possible
+        this.initPromise = null;
+        if (error instanceof ManifestMCPError) {
+          throw error;
+        }
         throw new ManifestMCPError(
           ManifestMCPErrorCode.INVALID_MNEMONIC,
-          'No accounts derived from mnemonic'
+          `Failed to create wallet from mnemonic: ${error instanceof Error ? error.message : String(error)}`
         );
       }
+    })();
 
-      this.address = accounts[0].address;
-    } catch (error) {
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.INVALID_MNEMONIC,
-        `Failed to create wallet from mnemonic: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    return this.initPromise;
   }
 
   /**
@@ -85,6 +104,7 @@ export class MnemonicWalletProvider implements WalletProvider {
     this.mnemonic = null;
     this.wallet = null;
     this.address = null;
+    this.initPromise = null;
     this.disconnected = true;
   }
 

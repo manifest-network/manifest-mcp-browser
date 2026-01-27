@@ -5,6 +5,29 @@ import { parseAmount, buildTxResult, parseBigInt, validateArgsLength } from './u
 
 const { MsgVote, MsgDeposit, MsgVoteWeighted, VoteOption } = cosmos.gov.v1;
 
+/** 10^18 as BigInt for fixed-point math */
+const FIXED18_ONE = BigInt('1000000000000000000');
+
+/**
+ * Format a fixed-18 BigInt as a decimal string without precision loss.
+ * E.g., 500000000000000000n -> "0.5", 1000000000000000000n -> "1.0"
+ */
+function formatFixed18(value: bigint): string {
+  const isNegative = value < BigInt(0);
+  const absValue = isNegative ? -value : value;
+  const intPart = absValue / FIXED18_ONE;
+  const fracPart = absValue % FIXED18_ONE;
+
+  // Pad fraction to 18 digits, then trim trailing zeros
+  const fracStr = fracPart.toString().padStart(18, '0').replace(/0+$/, '');
+
+  const sign = isNegative ? '-' : '';
+  if (fracStr === '') {
+    return `${sign}${intPart}.0`;
+  }
+  return `${sign}${intPart}.${fracStr}`;
+}
+
 /**
  * Parse a decimal weight string to an 18-decimal fixed-point string.
  * Uses string manipulation to avoid floating-point precision loss.
@@ -91,8 +114,15 @@ export async function routeGovTransaction(
       // Extract optional metadata from args
       let metadata = '';
       const metadataIndex = args.indexOf('--metadata');
-      if (metadataIndex !== -1 && args[metadataIndex + 1]) {
-        metadata = args[metadataIndex + 1];
+      if (metadataIndex !== -1) {
+        const metadataValue = args[metadataIndex + 1];
+        if (!metadataValue || metadataValue.startsWith('--')) {
+          throw new ManifestMCPError(
+            ManifestMCPErrorCode.TX_FAILED,
+            '--metadata flag requires a value'
+          );
+        }
+        metadata = metadataValue;
       }
 
       const msg = {
@@ -138,11 +168,10 @@ export async function routeGovTransaction(
 
       // Validate that weights sum to exactly 1.0 (10^18 in fixed-point)
       const totalWeight = options.reduce((sum, opt) => sum + BigInt(opt.weight), BigInt(0));
-      const oneInFixed18 = BigInt('1000000000000000000'); // 10^18
-      if (totalWeight !== oneInFixed18) {
+      if (totalWeight !== FIXED18_ONE) {
         throw new ManifestMCPError(
           ManifestMCPErrorCode.TX_FAILED,
-          `Weighted vote options must sum to exactly 1.0. Got ${Number(totalWeight) / 1e18} (${options.map(o => o.weight).join(' + ')} = ${totalWeight})`
+          `Weighted vote options must sum to exactly 1.0. Got ${formatFixed18(totalWeight)} (${options.map(o => o.weight).join(' + ')} = ${totalWeight})`
         );
       }
 
