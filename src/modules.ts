@@ -153,9 +153,9 @@ const TX_MODULES: ModuleRegistry = {
     description: 'Manifest billing transaction subcommands',
     subcommands: [
       { name: 'fund-credit', description: 'Fund credit for a tenant', args: '<tenant-address> <amount> (e.g., manifest1abc... 1000000umfx)' },
-      { name: 'create-lease', description: 'Create a new lease', args: '<sku-uuid:quantity>... (e.g., sku-123:1 sku-456:2)' },
+      { name: 'create-lease', description: 'Create a new lease', args: '[--meta-hash <hex>] <sku-uuid:quantity>... (e.g., sku-123:1 sku-456:2)' },
       { name: 'close-lease', description: 'Close one or more leases', args: '<lease-uuid>... (e.g., lease-123 lease-456)' },
-      { name: 'withdraw', description: 'Withdraw earnings from leases', args: '<lease-uuid>... OR --provider <provider-uuid>' },
+      { name: 'withdraw', description: 'Withdraw earnings from leases', args: '<lease-uuid>... OR --provider <provider-uuid> [--limit <1-100>]' },
     ],
   },
   manifest: {

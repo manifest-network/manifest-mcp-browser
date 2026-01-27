@@ -74,7 +74,8 @@ export class CosmosClientManager {
   }
 
   /**
-   * Get or create a singleton instance for the given config
+   * Get or create a singleton instance for the given config.
+   * If an instance exists with different rate limit settings, the limiter is updated.
    */
   static getInstance(
     config: ManifestMCPConfig,
@@ -86,6 +87,17 @@ export class CosmosClientManager {
     if (!instance) {
       instance = new CosmosClientManager(config, walletProvider);
       CosmosClientManager.instances.set(key, instance);
+    } else {
+      // Update rate limiter if settings changed
+      const newRps = config.rateLimit?.requestsPerSecond ?? DEFAULT_REQUESTS_PER_SECOND;
+      const currentRps = instance.config.rateLimit?.requestsPerSecond ?? DEFAULT_REQUESTS_PER_SECOND;
+      if (newRps !== currentRps) {
+        instance.rateLimiter = new RateLimiter({
+          tokensPerInterval: newRps,
+          interval: 'second',
+        });
+        instance.config = { ...instance.config, rateLimit: { requestsPerSecond: newRps } };
+      }
     }
 
     return instance;

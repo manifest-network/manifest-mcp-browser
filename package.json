@@ -29,7 +29,7 @@
   "author": "Felix C. Morency",
   "license": "MIT",
   "dependencies": {
-    "@manifest-network/manifestjs": "2.2.0-billing-v2.0",
+    "@manifest-network/manifestjs": "2.2.0-billing-v2.1",
     "@modelcontextprotocol/sdk": "1.25.3",
     "limiter": "3.0.0"
   },

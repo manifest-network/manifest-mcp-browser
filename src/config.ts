@@ -28,27 +28,36 @@ function isValidUrl(url: string): boolean {
 }
 
 /**
+ * Check if a hostname is localhost (IPv4, IPv6, or hostname)
+ * Handles both bracketed and unbracketed IPv6 formats
+ */
+function isLocalhostHostname(hostname: string): boolean {
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return true;
+  }
+  // Handle IPv6 localhost - hostname may be '::1' or '[::1]' depending on environment
+  const normalizedHostname = hostname.replace(/^\[|\]$/g, '');
+  return normalizedHostname === '::1';
+}
+
+/**
  * Check if URL uses HTTPS or is localhost (HTTP allowed for local dev)
  */
 function isSecureOrLocalUrl(url: string): { secure: boolean; reason?: string } {
   try {
     const parsed = new URL(url);
-    const isLocalhost =
-      parsed.hostname === 'localhost' ||
-      parsed.hostname === '127.0.0.1' ||
-      parsed.hostname === '[::1]';
 
     if (parsed.protocol === 'https:') {
       return { secure: true };
     }
 
-    if (parsed.protocol === 'http:' && isLocalhost) {
+    if (parsed.protocol === 'http:' && isLocalhostHostname(parsed.hostname)) {
       return { secure: true }; // HTTP allowed for localhost
     }
 
     return {
       secure: false,
-      reason: `RPC URL must use HTTPS (got ${parsed.protocol}//). HTTP is only allowed for localhost.`,
+      reason: `RPC URL must use HTTPS (got ${parsed.protocol}//). HTTP is only allowed for local development (localhost, 127.0.0.1, ::1).`,
     };
   } catch {
     return { secure: false, reason: 'Invalid URL format' };
@@ -139,7 +148,9 @@ export function validateConfig(config: Partial<ManifestMCPConfig>): ValidationRe
   }
 
   if (config.rateLimit !== undefined) {
-    if (config.rateLimit.requestsPerSecond !== undefined) {
+    if (typeof config.rateLimit !== 'object' || config.rateLimit === null) {
+      errors.push('rateLimit must be an object');
+    } else if (config.rateLimit.requestsPerSecond !== undefined) {
       if (
         typeof config.rateLimit.requestsPerSecond !== 'number' ||
         config.rateLimit.requestsPerSecond <= 0 ||
