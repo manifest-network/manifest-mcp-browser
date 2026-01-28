@@ -1,8 +1,8 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
-import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult } from '../types.js';
+import { CosmosTxResult } from '../types.js';
 import { throwUnsupportedSubcommand } from '../modules.js';
-import { parseAmount, buildTxResult, validateAddress, validateArgsLength } from './utils.js';
+import { parseAmount, buildTxResult, validateAddress, validateArgsLength, requireArgs } from './utils.js';
 
 const { MsgDelegate, MsgUndelegate, MsgBeginRedelegate } = cosmos.staking.v1beta1;
 
@@ -20,13 +20,7 @@ export async function routeStakingTransaction(
 
   switch (subcommand) {
     case 'delegate': {
-      if (args.length < 2) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          'delegate requires validator-address and amount arguments'
-        );
-      }
-
+      requireArgs(args, 2, ['validator-address', 'amount'], 'staking delegate');
       const [validatorAddress, amountStr] = args;
       validateAddress(validatorAddress, 'validator address');
       const { amount, denom } = parseAmount(amountStr);
@@ -46,13 +40,7 @@ export async function routeStakingTransaction(
 
     case 'unbond':
     case 'undelegate': {
-      if (args.length < 2) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          'unbond requires validator-address and amount arguments'
-        );
-      }
-
+      requireArgs(args, 2, ['validator-address', 'amount'], 'staking unbond');
       const [validatorAddress, amountStr] = args;
       validateAddress(validatorAddress, 'validator address');
       const { amount, denom } = parseAmount(amountStr);
@@ -71,13 +59,7 @@ export async function routeStakingTransaction(
     }
 
     case 'redelegate': {
-      if (args.length < 3) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          'redelegate requires src-validator, dst-validator, and amount arguments'
-        );
-      }
-
+      requireArgs(args, 3, ['src-validator', 'dst-validator', 'amount'], 'staking redelegate');
       const [srcValidatorAddress, dstValidatorAddress, amountStr] = args;
       validateAddress(srcValidatorAddress, 'source validator address');
       validateAddress(dstValidatorAddress, 'destination validator address');

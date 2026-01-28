@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { toBech32 } from '@cosmjs/encoding';
-import { parseAmount, parseBigInt, extractFlag, filterConsumedArgs, parseColonPair, validateAddress, validateMemo, validateArgsLength } from './utils.js';
+import { parseAmount, parseBigInt, extractFlag, filterConsumedArgs, parseColonPair, validateAddress, validateMemo, validateArgsLength, requireArgs } from './utils.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
 
 describe('parseAmount', () => {
@@ -354,6 +354,80 @@ describe('validateArgsLength', () => {
       expect(message).toContain('bank send');
       expect(message).toContain('150');
       expect(message).toContain('100');
+    }
+  });
+});
+
+describe('requireArgs', () => {
+  it('should pass when args meet minimum count', () => {
+    expect(() => requireArgs(['a', 'b'], 2, ['arg1', 'arg2'], 'test')).not.toThrow();
+    expect(() => requireArgs(['a', 'b', 'c'], 2, ['arg1', 'arg2'], 'test')).not.toThrow();
+  });
+
+  it('should pass when zero args required', () => {
+    expect(() => requireArgs([], 0, [], 'test')).not.toThrow();
+  });
+
+  it('should throw when args below minimum count', () => {
+    expect(() => requireArgs(['a'], 2, ['arg1', 'arg2'], 'test')).toThrow(ManifestMCPError);
+    expect(() => requireArgs([], 1, ['arg1'], 'test')).toThrow(ManifestMCPError);
+  });
+
+  it('should use TX_FAILED error code by default', () => {
+    try {
+      requireArgs([], 1, ['arg1'], 'test');
+    } catch (error) {
+      expect((error as ManifestMCPError).code).toBe(ManifestMCPErrorCode.TX_FAILED);
+    }
+  });
+
+  it('should include context in error message', () => {
+    try {
+      requireArgs(['a'], 2, ['recipient', 'amount'], 'bank send');
+    } catch (error) {
+      const message = (error as ManifestMCPError).message;
+      expect(message).toContain('bank send');
+      expect(message).toContain('recipient');
+      expect(message).toContain('amount');
+    }
+  });
+
+  it('should include received args in error message', () => {
+    try {
+      requireArgs(['value1'], 2, ['arg1', 'arg2'], 'test');
+    } catch (error) {
+      const message = (error as ManifestMCPError).message;
+      expect(message).toContain('"value1"');
+      expect(message).toContain('Received 1');
+    }
+  });
+
+  it('should show "none" when no args received', () => {
+    try {
+      requireArgs([], 1, ['arg1'], 'test');
+    } catch (error) {
+      const message = (error as ManifestMCPError).message;
+      expect(message).toContain('none');
+    }
+  });
+
+  it('should include details with expected and received args', () => {
+    try {
+      requireArgs(['a'], 2, ['arg1', 'arg2'], 'test');
+    } catch (error) {
+      const details = (error as ManifestMCPError).details;
+      expect(details?.expectedArgs).toEqual(['arg1', 'arg2']);
+      expect(details?.receivedArgs).toEqual(['a']);
+      expect(details?.receivedCount).toBe(1);
+      expect(details?.requiredCount).toBe(2);
+    }
+  });
+
+  it('should accept custom error code', () => {
+    try {
+      requireArgs([], 1, ['arg1'], 'test', ManifestMCPErrorCode.QUERY_FAILED);
+    } catch (error) {
+      expect((error as ManifestMCPError).code).toBe(ManifestMCPErrorCode.QUERY_FAILED);
     }
   });
 });

@@ -2,7 +2,7 @@ import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult } from '../types.js';
 import { throwUnsupportedSubcommand } from '../modules.js';
-import { parseAmount, buildTxResult, parseBigInt, validateArgsLength, extractFlag } from './utils.js';
+import { parseAmount, buildTxResult, parseBigInt, validateArgsLength, extractFlag, requireArgs } from './utils.js';
 
 const { MsgVote, MsgDeposit, MsgVoteWeighted, VoteOption } = cosmos.gov.v1;
 
@@ -100,13 +100,7 @@ export async function routeGovTransaction(
 
   switch (subcommand) {
     case 'vote': {
-      if (args.length < 2) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          'vote requires proposal-id and option arguments'
-        );
-      }
-
+      requireArgs(args, 2, ['proposal-id', 'option'], 'gov vote');
       const [proposalIdStr, optionStr] = args;
       const proposalId = parseBigInt(proposalIdStr, 'proposal-id');
       const option = parseVoteOption(optionStr);
@@ -129,13 +123,7 @@ export async function routeGovTransaction(
     }
 
     case 'weighted-vote': {
-      if (args.length < 2) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          'weighted-vote requires proposal-id and options arguments (format: yes=0.5,no=0.5)'
-        );
-      }
-
+      requireArgs(args, 2, ['proposal-id', 'options'], 'gov weighted-vote');
       const [proposalIdStr, optionsStr] = args;
       const proposalId = parseBigInt(proposalIdStr, 'proposal-id');
 
@@ -179,13 +167,7 @@ export async function routeGovTransaction(
     }
 
     case 'deposit': {
-      if (args.length < 2) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          'deposit requires proposal-id and amount arguments'
-        );
-      }
-
+      requireArgs(args, 2, ['proposal-id', 'amount'], 'gov deposit');
       const [proposalIdStr, amountStr] = args;
       const proposalId = parseBigInt(proposalIdStr, 'proposal-id');
       const { amount, denom } = parseAmount(amountStr);

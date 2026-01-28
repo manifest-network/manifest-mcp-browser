@@ -2,7 +2,7 @@ import { SigningStargateClient } from '@cosmjs/stargate';
 import { fromHex } from '@cosmjs/encoding';
 import { liftedinit } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult } from '../types.js';
-import { parseAmount, buildTxResult, parseBigInt, validateAddress, validateArgsLength, extractFlag, filterConsumedArgs, parseColonPair } from './utils.js';
+import { parseAmount, buildTxResult, parseBigInt, validateAddress, validateArgsLength, extractFlag, filterConsumedArgs, parseColonPair, requireArgs } from './utils.js';
 import { getSubcommandUsage, throwUnsupportedSubcommand } from '../modules.js';
 
 const { MsgFundCredit, MsgCreateLease, MsgCloseLease, MsgWithdraw } = liftedinit.billing.v1;
@@ -56,15 +56,7 @@ export async function routeBillingTransaction(
 
   switch (subcommand) {
     case 'fund-credit': {
-      if (args.length < 2) {
-        const usage = getSubcommandUsage('tx', 'billing', 'fund-credit');
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          `fund-credit requires tenant-address and amount arguments. Received ${args.length} argument(s): [${args.map(a => `"${a}"`).join(', ')}]. Usage: fund-credit ${usage || '<tenant-address> <amount>'}`,
-          { receivedArgs: args, expectedArgs: ['tenant-address', 'amount'], usage }
-        );
-      }
-
+      requireArgs(args, 2, ['tenant-address', 'amount'], 'billing fund-credit');
       const [tenant, amountStr] = args;
       validateAddress(tenant, 'tenant address');
       const { amount, denom } = parseAmount(amountStr);
@@ -89,15 +81,7 @@ export async function routeBillingTransaction(
 
       // Filter out --meta-hash and its value to get item args
       const itemArgs = filterConsumedArgs(args, consumedIndices);
-
-      if (itemArgs.length < 1) {
-        const usage = getSubcommandUsage('tx', 'billing', 'create-lease');
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          `create-lease requires at least one sku-uuid:quantity pair. Usage: create-lease ${usage ?? '<args>'}`,
-          { usage }
-        );
-      }
+      requireArgs(itemArgs, 1, ['sku-uuid:quantity'], 'billing create-lease');
 
       // Parse items (format: sku-uuid:quantity ...)
       const items = itemArgs.map((arg) => {
@@ -122,15 +106,7 @@ export async function routeBillingTransaction(
       // Parse optional --reason flag
       const { value: reason, consumedIndices } = extractFlag(args, '--reason', 'billing close-lease');
       const leaseArgs = filterConsumedArgs(args, consumedIndices);
-
-      if (leaseArgs.length < 1) {
-        const usage = getSubcommandUsage('tx', 'billing', 'close-lease');
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          `close-lease requires at least one lease-uuid argument. Usage: close-lease ${usage || '[--reason <reason>] <lease-uuid>...'}`,
-          { usage }
-        );
-      }
+      requireArgs(leaseArgs, 1, ['lease-uuid'], 'billing close-lease');
 
       // MsgCloseLease can close multiple leases at once
       const leaseUuids = leaseArgs;
@@ -149,14 +125,7 @@ export async function routeBillingTransaction(
     }
 
     case 'withdraw': {
-      if (args.length < 1) {
-        const usage = getSubcommandUsage('tx', 'billing', 'withdraw');
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          `withdraw requires at least one lease-uuid argument or provider-uuid with --provider flag. Usage: withdraw ${usage ?? '<args>'}`,
-          { usage }
-        );
-      }
+      requireArgs(args, 1, ['lease-uuid or --provider'], 'billing withdraw');
 
       // Extract flags
       const providerFlag = extractFlag(args, '--provider', 'billing withdraw');

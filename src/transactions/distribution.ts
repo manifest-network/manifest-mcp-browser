@@ -1,8 +1,8 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
-import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult } from '../types.js';
+import { CosmosTxResult } from '../types.js';
 import { throwUnsupportedSubcommand } from '../modules.js';
-import { parseAmount, buildTxResult, validateAddress, validateArgsLength } from './utils.js';
+import { parseAmount, buildTxResult, validateAddress, validateArgsLength, requireArgs } from './utils.js';
 
 const { MsgWithdrawDelegatorReward, MsgSetWithdrawAddress, MsgFundCommunityPool } = cosmos.distribution.v1beta1;
 
@@ -20,13 +20,7 @@ export async function routeDistributionTransaction(
 
   switch (subcommand) {
     case 'withdraw-rewards': {
-      if (args.length < 1) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          'withdraw-rewards requires validator-address argument'
-        );
-      }
-
+      requireArgs(args, 1, ['validator-address'], 'distribution withdraw-rewards');
       const [validatorAddress] = args;
       validateAddress(validatorAddress, 'validator address');
 
@@ -43,13 +37,7 @@ export async function routeDistributionTransaction(
     }
 
     case 'set-withdraw-addr': {
-      if (args.length < 1) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          'set-withdraw-addr requires withdraw-address argument'
-        );
-      }
-
+      requireArgs(args, 1, ['withdraw-address'], 'distribution set-withdraw-addr');
       const [withdrawAddress] = args;
       validateAddress(withdrawAddress, 'withdraw address');
 
@@ -66,13 +54,7 @@ export async function routeDistributionTransaction(
     }
 
     case 'fund-community-pool': {
-      if (args.length < 1) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          'fund-community-pool requires amount argument'
-        );
-      }
-
+      requireArgs(args, 1, ['amount'], 'distribution fund-community-pool');
       const [amountStr] = args;
       const { amount, denom } = parseAmount(amountStr);
 

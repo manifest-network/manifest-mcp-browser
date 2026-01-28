@@ -98,7 +98,7 @@ export function parseColonPair(
 }
 
 /**
- * Validate args array length
+ * Validate args array length (max limit)
  */
 export function validateArgsLength(args: string[], context: string): void {
   if (args.length > MAX_ARGS) {
@@ -107,6 +107,45 @@ export function validateArgsLength(args: string[], context: string): void {
       `Too many arguments for ${context}: ${args.length}. Maximum allowed: ${MAX_ARGS}`
     );
   }
+}
+
+/**
+ * Validate that required arguments are present.
+ * Provides helpful error messages with received vs expected args.
+ *
+ * @param args - The arguments array to validate
+ * @param minCount - Minimum number of required arguments
+ * @param expectedNames - Names of expected arguments for error messages
+ * @param context - Context for error messages (e.g., 'bank send', 'staking delegate')
+ * @param errorCode - Error code to use (defaults to TX_FAILED)
+ * @throws ManifestMCPError if args.length < minCount
+ */
+export function requireArgs(
+  args: string[],
+  minCount: number,
+  expectedNames: string[],
+  context: string,
+  errorCode: ManifestMCPErrorCode = ManifestMCPErrorCode.TX_FAILED
+): void {
+  if (args.length >= minCount) {
+    return;
+  }
+
+  const expectedList = expectedNames.slice(0, minCount).join(', ');
+  const receivedList = args.length === 0
+    ? 'none'
+    : args.map(a => `"${a}"`).join(', ');
+
+  throw new ManifestMCPError(
+    errorCode,
+    `${context} requires ${minCount} argument(s): ${expectedList}. Received ${args.length}: ${receivedList}`,
+    {
+      expectedArgs: expectedNames.slice(0, minCount),
+      receivedArgs: args,
+      receivedCount: args.length,
+      requiredCount: minCount,
+    }
+  );
 }
 
 /**

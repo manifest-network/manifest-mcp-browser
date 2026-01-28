@@ -1,4 +1,42 @@
-import { ModuleInfo, AvailableModules, ManifestMCPError, ManifestMCPErrorCode } from './types.js';
+import { SigningStargateClient } from '@cosmjs/stargate';
+import { ModuleInfo, AvailableModules, ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, QueryResult } from './types.js';
+import { ManifestQueryClient } from './client.js';
+
+// Import query handlers
+import { routeBankQuery } from './queries/bank.js';
+import { routeStakingQuery } from './queries/staking.js';
+import { routeDistributionQuery } from './queries/distribution.js';
+import { routeGovQuery } from './queries/gov.js';
+import { routeAuthQuery } from './queries/auth.js';
+import { routeBillingQuery } from './queries/billing.js';
+
+// Import transaction handlers
+import { routeBankTransaction } from './transactions/bank.js';
+import { routeStakingTransaction } from './transactions/staking.js';
+import { routeDistributionTransaction } from './transactions/distribution.js';
+import { routeGovTransaction } from './transactions/gov.js';
+import { routeBillingTransaction } from './transactions/billing.js';
+import { routeManifestTransaction } from './transactions/manifest.js';
+
+/**
+ * Handler function type for query modules
+ */
+export type QueryHandler = (
+  queryClient: ManifestQueryClient,
+  subcommand: string,
+  args: string[]
+) => Promise<QueryResult>;
+
+/**
+ * Handler function type for transaction modules
+ */
+export type TxHandler = (
+  signingClient: SigningStargateClient,
+  senderAddress: string,
+  subcommand: string,
+  args: string[],
+  waitForConfirmation: boolean
+) => Promise<CosmosTxResult>;
 
 /**
  * Throw an error for an unsupported subcommand.
@@ -35,19 +73,30 @@ interface SubcommandInfo {
   args?: string; // Usage hint for arguments
 }
 
-interface ModuleRegistry {
+interface QueryModuleRegistry {
   [moduleName: string]: {
     description: string;
     subcommands: SubcommandInfo[];
+    handler: QueryHandler;
+  };
+}
+
+interface TxModuleRegistry {
+  [moduleName: string]: {
+    description: string;
+    subcommands: SubcommandInfo[];
+    handler: TxHandler;
   };
 }
 
 /**
  * Query modules registry
+ * Each module includes metadata and its handler function
  */
-const QUERY_MODULES: ModuleRegistry = {
+const QUERY_MODULES: QueryModuleRegistry = {
   bank: {
     description: 'Querying commands for the bank module',
+    handler: routeBankQuery,
     subcommands: [
       { name: 'balance', description: 'Query account balance for a specific denom' },
       { name: 'balances', description: 'Query all balances for an account' },
@@ -63,6 +112,7 @@ const QUERY_MODULES: ModuleRegistry = {
   },
   staking: {
     description: 'Querying commands for the staking module',
+    handler: routeStakingQuery,
     subcommands: [
       { name: 'delegation', description: 'Query a delegation' },
       { name: 'delegations', description: 'Query all delegations for a delegator' },
@@ -80,6 +130,7 @@ const QUERY_MODULES: ModuleRegistry = {
   },
   distribution: {
     description: 'Querying commands for the distribution module',
+    handler: routeDistributionQuery,
     subcommands: [
       { name: 'rewards', description: 'Query distribution rewards for a delegator' },
       { name: 'commission', description: 'Query validator commission' },
@@ -93,6 +144,7 @@ const QUERY_MODULES: ModuleRegistry = {
   },
   gov: {
     description: 'Querying commands for the governance module',
+    handler: routeGovQuery,
     subcommands: [
       { name: 'proposal', description: 'Query a proposal by ID' },
       { name: 'proposals', description: 'Query all proposals' },
@@ -106,6 +158,7 @@ const QUERY_MODULES: ModuleRegistry = {
   },
   auth: {
     description: 'Querying commands for the auth module',
+    handler: routeAuthQuery,
     subcommands: [
       { name: 'account', description: 'Query account by address' },
       { name: 'accounts', description: 'Query all accounts' },
@@ -120,6 +173,7 @@ const QUERY_MODULES: ModuleRegistry = {
   },
   billing: {
     description: 'Querying commands for the Manifest billing module',
+    handler: routeBillingQuery,
     subcommands: [
       { name: 'params', description: 'Query billing parameters' },
       { name: 'lease', description: 'Query a lease by UUID' },
@@ -139,10 +193,12 @@ const QUERY_MODULES: ModuleRegistry = {
 
 /**
  * Transaction modules registry
+ * Each module includes metadata and its handler function
  */
-const TX_MODULES: ModuleRegistry = {
+const TX_MODULES: TxModuleRegistry = {
   bank: {
     description: 'Bank transaction subcommands',
+    handler: routeBankTransaction,
     subcommands: [
       { name: 'send', description: 'Send tokens to another account', args: '<to-address> <amount> (e.g., manifest1abc... 1000000umfx)' },
       { name: 'multi-send', description: 'Send tokens to multiple accounts', args: '<to-address:amount>... (e.g., manifest1a:1000umfx manifest1b:2000umfx)' },
@@ -150,6 +206,7 @@ const TX_MODULES: ModuleRegistry = {
   },
   staking: {
     description: 'Staking transaction subcommands',
+    handler: routeStakingTransaction,
     subcommands: [
       { name: 'delegate', description: 'Delegate tokens to a validator' },
       { name: 'unbond', description: 'Unbond tokens from a validator' },
@@ -159,6 +216,7 @@ const TX_MODULES: ModuleRegistry = {
   },
   distribution: {
     description: 'Distribution transaction subcommands',
+    handler: routeDistributionTransaction,
     subcommands: [
       { name: 'withdraw-rewards', description: 'Withdraw rewards from a validator' },
       { name: 'set-withdraw-addr', description: 'Set withdraw address' },
@@ -167,6 +225,7 @@ const TX_MODULES: ModuleRegistry = {
   },
   gov: {
     description: 'Governance transaction subcommands',
+    handler: routeGovTransaction,
     subcommands: [
       { name: 'vote', description: 'Vote on a proposal' },
       { name: 'weighted-vote', description: 'Weighted vote on a proposal' },
@@ -175,6 +234,7 @@ const TX_MODULES: ModuleRegistry = {
   },
   billing: {
     description: 'Manifest billing transaction subcommands',
+    handler: routeBillingTransaction,
     subcommands: [
       { name: 'fund-credit', description: 'Fund credit for a tenant', args: '<tenant-address> <amount> (e.g., manifest1abc... 1000000umfx)' },
       { name: 'create-lease', description: 'Create a new lease', args: '[--meta-hash <hex>] <sku-uuid:quantity>... (e.g., sku-123:1 sku-456:2)' },
@@ -184,6 +244,7 @@ const TX_MODULES: ModuleRegistry = {
   },
   manifest: {
     description: 'Manifest module transaction subcommands',
+    handler: routeManifestTransaction,
     subcommands: [
       { name: 'payout', description: 'Execute a payout to multiple addresses' },
       { name: 'burn-held-balance', description: 'Burn held balance' },
@@ -299,4 +360,36 @@ export function getSupportedModules(): {
   }
 
   return result;
+}
+
+/**
+ * Get the handler function for a query module
+ * @throws ManifestMCPError if module is not found
+ */
+export function getQueryHandler(module: string): QueryHandler {
+  const moduleInfo = QUERY_MODULES[module];
+  if (!moduleInfo) {
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.UNKNOWN_MODULE,
+      `Unknown query module: ${module}`,
+      { availableModules: Object.keys(QUERY_MODULES) }
+    );
+  }
+  return moduleInfo.handler;
+}
+
+/**
+ * Get the handler function for a transaction module
+ * @throws ManifestMCPError if module is not found
+ */
+export function getTxHandler(module: string): TxHandler {
+  const moduleInfo = TX_MODULES[module];
+  if (!moduleInfo) {
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.UNKNOWN_MODULE,
+      `Unknown tx module: ${module}`,
+      { availableModules: Object.keys(TX_MODULES) }
+    );
+  }
+  return moduleInfo.handler;
 }

@@ -1,8 +1,8 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
-import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult } from '../types.js';
+import { CosmosTxResult } from '../types.js';
 import { throwUnsupportedSubcommand } from '../modules.js';
-import { parseAmount, buildTxResult, validateAddress, validateMemo, validateArgsLength, extractFlag, parseColonPair } from './utils.js';
+import { parseAmount, buildTxResult, validateAddress, validateMemo, validateArgsLength, extractFlag, parseColonPair, requireArgs } from './utils.js';
 
 const { MsgSend, MsgMultiSend } = cosmos.bank.v1beta1;
 
@@ -20,13 +20,7 @@ export async function routeBankTransaction(
 
   switch (subcommand) {
     case 'send': {
-      if (args.length < 2) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          'send requires recipient-address and amount arguments'
-        );
-      }
-
+      requireArgs(args, 2, ['recipient-address', 'amount'], 'bank send');
       const [recipientAddress, amountStr] = args;
       validateAddress(recipientAddress, 'recipient address');
       const { amount, denom } = parseAmount(amountStr);
@@ -51,13 +45,7 @@ export async function routeBankTransaction(
     }
 
     case 'multi-send': {
-      if (args.length < 1) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          'multi-send requires at least one recipient:amount pair'
-        );
-      }
-
+      requireArgs(args, 1, ['recipient:amount'], 'bank multi-send');
       // Parse format: multi-send recipient1:amount1 recipient2:amount2 ...
       const outputs = args.map((arg) => {
         const [address, amountStr] = parseColonPair(arg, 'address', 'amount', 'multi-send');

@@ -1,26 +1,40 @@
 import { ManifestQueryClient } from '../client.js';
-import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
-import { parseBigInt, defaultPagination } from './utils.js';
+import {
+  DelegationResult, DelegationsResult, UnbondingDelegationResult, UnbondingDelegationsResult,
+  RedelegationsResult, ValidatorResult, ValidatorsResult, StakingPoolResult,
+  StakingParamsResult, HistoricalInfoResult
+} from '../types.js';
+import { parseBigInt, requireArgs, extractPaginationArgs } from './utils.js';
 import { throwUnsupportedSubcommand } from '../modules.js';
+
+/** Staking query result union type */
+type StakingQueryResult =
+  | DelegationResult
+  | DelegationsResult
+  | UnbondingDelegationResult
+  | UnbondingDelegationsResult
+  | RedelegationsResult
+  | ValidatorResult
+  | ValidatorsResult
+  | StakingPoolResult
+  | StakingParamsResult
+  | HistoricalInfoResult;
 
 /**
  * Route staking query to manifestjs query client
+ *
+ * Paginated queries support --limit flag (default: 100, max: 1000)
  */
 export async function routeStakingQuery(
   queryClient: ManifestQueryClient,
   subcommand: string,
   args: string[]
-): Promise<Record<string, unknown>> {
+): Promise<StakingQueryResult> {
   const staking = queryClient.cosmos.staking.v1beta1;
 
   switch (subcommand) {
     case 'delegation': {
-      if (args.length < 2) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          'delegation requires delegator-address and validator-address arguments'
-        );
-      }
+      requireArgs(args, 2, ['delegator-address', 'validator-address'], 'staking delegation');
       const [delegatorAddr, validatorAddr] = args;
       const result = await staking.delegation({
         delegatorAddr,
@@ -30,14 +44,10 @@ export async function routeStakingQuery(
     }
 
     case 'delegations': {
-      if (args.length < 1) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          'delegations requires delegator-address argument'
-        );
-      }
-      const [delegatorAddr] = args;
-      const result = await staking.delegatorDelegations({ delegatorAddr, pagination: defaultPagination });
+      const { pagination, remainingArgs } = extractPaginationArgs(args, 'staking delegations');
+      requireArgs(remainingArgs, 1, ['delegator-address'], 'staking delegations');
+      const [delegatorAddr] = remainingArgs;
+      const result = await staking.delegatorDelegations({ delegatorAddr, pagination });
       return {
         delegationResponses: result.delegationResponses,
         pagination: result.pagination,
@@ -45,12 +55,7 @@ export async function routeStakingQuery(
     }
 
     case 'unbonding-delegation': {
-      if (args.length < 2) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          'unbonding-delegation requires delegator-address and validator-address arguments'
-        );
-      }
+      requireArgs(args, 2, ['delegator-address', 'validator-address'], 'staking unbonding-delegation');
       const [delegatorAddr, validatorAddr] = args;
       const result = await staking.unbondingDelegation({
         delegatorAddr,
@@ -60,14 +65,10 @@ export async function routeStakingQuery(
     }
 
     case 'unbonding-delegations': {
-      if (args.length < 1) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          'unbonding-delegations requires delegator-address argument'
-        );
-      }
-      const [delegatorAddr] = args;
-      const result = await staking.delegatorUnbondingDelegations({ delegatorAddr, pagination: defaultPagination });
+      const { pagination, remainingArgs } = extractPaginationArgs(args, 'staking unbonding-delegations');
+      requireArgs(remainingArgs, 1, ['delegator-address'], 'staking unbonding-delegations');
+      const [delegatorAddr] = remainingArgs;
+      const result = await staking.delegatorUnbondingDelegations({ delegatorAddr, pagination });
       return {
         unbondingResponses: result.unbondingResponses,
         pagination: result.pagination,
@@ -75,20 +76,17 @@ export async function routeStakingQuery(
     }
 
     case 'redelegations': {
-      if (args.length < 1) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          'redelegations requires delegator-address argument'
-        );
-      }
-      const [delegatorAddr] = args;
-      const srcValidatorAddr = args[1] || '';
-      const dstValidatorAddr = args[2] || '';
+      const { pagination, remainingArgs } = extractPaginationArgs(args, 'staking redelegations');
+      requireArgs(remainingArgs, 1, ['delegator-address'], 'staking redelegations');
+      const [delegatorAddr] = remainingArgs;
+      // Optional: src and dst validator addresses for filtering
+      const srcValidatorAddr = remainingArgs[1] || '';
+      const dstValidatorAddr = remainingArgs[2] || '';
       const result = await staking.redelegations({
         delegatorAddr,
         srcValidatorAddr,
         dstValidatorAddr,
-        pagination: defaultPagination,
+        pagination,
       });
       return {
         redelegationResponses: result.redelegationResponses,
@@ -97,32 +95,25 @@ export async function routeStakingQuery(
     }
 
     case 'validator': {
-      if (args.length < 1) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          'validator requires validator-address argument'
-        );
-      }
+      requireArgs(args, 1, ['validator-address'], 'staking validator');
       const [validatorAddr] = args;
       const result = await staking.validator({ validatorAddr });
       return { validator: result.validator };
     }
 
     case 'validators': {
-      const status = args[0] || '';
-      const result = await staking.validators({ status, pagination: defaultPagination });
+      const { pagination, remainingArgs } = extractPaginationArgs(args, 'staking validators');
+      // Optional: status filter
+      const status = remainingArgs[0] || '';
+      const result = await staking.validators({ status, pagination });
       return { validators: result.validators, pagination: result.pagination };
     }
 
     case 'validator-delegations': {
-      if (args.length < 1) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          'validator-delegations requires validator-address argument'
-        );
-      }
-      const [validatorAddr] = args;
-      const result = await staking.validatorDelegations({ validatorAddr, pagination: defaultPagination });
+      const { pagination, remainingArgs } = extractPaginationArgs(args, 'staking validator-delegations');
+      requireArgs(remainingArgs, 1, ['validator-address'], 'staking validator-delegations');
+      const [validatorAddr] = remainingArgs;
+      const result = await staking.validatorDelegations({ validatorAddr, pagination });
       return {
         delegationResponses: result.delegationResponses,
         pagination: result.pagination,
@@ -130,14 +121,10 @@ export async function routeStakingQuery(
     }
 
     case 'validator-unbonding-delegations': {
-      if (args.length < 1) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          'validator-unbonding-delegations requires validator-address argument'
-        );
-      }
-      const [validatorAddr] = args;
-      const result = await staking.validatorUnbondingDelegations({ validatorAddr, pagination: defaultPagination });
+      const { pagination, remainingArgs } = extractPaginationArgs(args, 'staking validator-unbonding-delegations');
+      requireArgs(remainingArgs, 1, ['validator-address'], 'staking validator-unbonding-delegations');
+      const [validatorAddr] = remainingArgs;
+      const result = await staking.validatorUnbondingDelegations({ validatorAddr, pagination });
       return {
         unbondingResponses: result.unbondingResponses,
         pagination: result.pagination,
@@ -155,12 +142,7 @@ export async function routeStakingQuery(
     }
 
     case 'historical-info': {
-      if (args.length < 1) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          'historical-info requires height argument'
-        );
-      }
+      requireArgs(args, 1, ['height'], 'staking historical-info');
       const height = parseBigInt(args[0], 'height');
       const result = await staking.historicalInfo({ height });
       return { hist: result.hist };
