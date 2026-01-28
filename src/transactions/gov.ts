@@ -2,7 +2,7 @@ import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult } from '../types.js';
 import { throwUnsupportedSubcommand } from '../modules.js';
-import { parseAmount, buildTxResult, parseBigInt, validateArgsLength, extractFlag, requireArgs } from './utils.js';
+import { parseAmount, buildTxResult, parseBigInt, validateArgsLength, extractFlag, requireArgs, parseVoteOption } from './utils.js';
 
 const { MsgVote, MsgDeposit, MsgVoteWeighted, VoteOption } = cosmos.gov.v1;
 
@@ -60,33 +60,6 @@ function parseWeightToFixed18(weightStr: string): string {
 }
 
 /**
- * Parse vote option string to VoteOption enum value from manifestjs
- */
-function parseVoteOption(optionStr: string): number {
-  const option = optionStr.toLowerCase();
-  switch (option) {
-    case 'yes':
-    case '1':
-      return VoteOption.VOTE_OPTION_YES;
-    case 'abstain':
-    case '2':
-      return VoteOption.VOTE_OPTION_ABSTAIN;
-    case 'no':
-    case '3':
-      return VoteOption.VOTE_OPTION_NO;
-    case 'no_with_veto':
-    case 'nowithveto':
-    case '4':
-      return VoteOption.VOTE_OPTION_NO_WITH_VETO;
-    default:
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.TX_FAILED,
-        `Invalid vote option: ${optionStr}. Expected: yes, no, abstain, or no_with_veto`
-      );
-  }
-}
-
-/**
  * Route gov transaction to appropriate handler
  */
 export async function routeGovTransaction(
@@ -103,7 +76,7 @@ export async function routeGovTransaction(
       requireArgs(args, 2, ['proposal-id', 'option'], 'gov vote');
       const [proposalIdStr, optionStr] = args;
       const proposalId = parseBigInt(proposalIdStr, 'proposal-id');
-      const option = parseVoteOption(optionStr);
+      const option = parseVoteOption(optionStr, VoteOption);
 
       // Extract optional metadata from args
       const { value: metadata = '' } = extractFlag(args, '--metadata', 'gov vote');
@@ -136,7 +109,7 @@ export async function routeGovTransaction(
             `Invalid weighted vote format: ${opt}. Expected format: option=weight`
           );
         }
-        const option = parseVoteOption(optName);
+        const option = parseVoteOption(optName, VoteOption);
         // Weight is a decimal string (e.g., "0.5" -> "500000000000000000" for 18 decimals)
         // Use string-based conversion to avoid floating-point precision loss
         const weight = parseWeightToFixed18(weightStr);

@@ -10,6 +10,7 @@ import { routeGovQuery } from './queries/gov.js';
 import { routeAuthQuery } from './queries/auth.js';
 import { routeBillingQuery } from './queries/billing.js';
 import { routeSkuQuery } from './queries/sku.js';
+import { routeGroupQuery } from './queries/group.js';
 
 // Import transaction handlers
 import { routeBankTransaction } from './transactions/bank.js';
@@ -19,6 +20,7 @@ import { routeGovTransaction } from './transactions/gov.js';
 import { routeBillingTransaction } from './transactions/billing.js';
 import { routeManifestTransaction } from './transactions/manifest.js';
 import { routeSkuTransaction } from './transactions/sku.js';
+import { routeGroupTransaction } from './transactions/group.js';
 
 /**
  * Handler function type for query modules
@@ -204,6 +206,26 @@ const QUERY_MODULES: QueryModuleRegistry = {
       { name: 'provider-by-address', description: 'Query providers by address', args: '<address> [--active-only] [--limit N]' },
     ],
   },
+  group: {
+    description: 'Querying commands for the group module',
+    handler: routeGroupQuery,
+    subcommands: [
+      { name: 'group-info', description: 'Query group info by ID', args: '<group-id>' },
+      { name: 'group-policy-info', description: 'Query group policy info by address', args: '<group-policy-address>' },
+      { name: 'group-members', description: 'Query group members', args: '<group-id> [--limit N]' },
+      { name: 'groups-by-admin', description: 'Query groups by admin address', args: '<admin-address> [--limit N]' },
+      { name: 'group-policies-by-group', description: 'Query group policies by group ID', args: '<group-id> [--limit N]' },
+      { name: 'group-policies-by-admin', description: 'Query group policies by admin address', args: '<admin-address> [--limit N]' },
+      { name: 'proposal', description: 'Query a group proposal by ID', args: '<proposal-id>' },
+      { name: 'proposals-by-group-policy', description: 'Query proposals by group policy address', args: '<group-policy-address> [--limit N]' },
+      { name: 'vote', description: 'Query a vote by proposal ID and voter', args: '<proposal-id> <voter-address>' },
+      { name: 'votes-by-proposal', description: 'Query votes by proposal ID', args: '<proposal-id> [--limit N]' },
+      { name: 'votes-by-voter', description: 'Query votes by voter address', args: '<voter-address> [--limit N]' },
+      { name: 'groups-by-member', description: 'Query groups by member address', args: '<member-address> [--limit N]' },
+      { name: 'tally', description: 'Query tally result for a proposal', args: '<proposal-id>' },
+      { name: 'groups', description: 'Query all groups', args: '[--limit N]' },
+    ],
+  },
 };
 
 /**
@@ -281,6 +303,26 @@ const TX_MODULES: TxModuleRegistry = {
       { name: 'update-sku', description: 'Update an existing SKU', args: '<sku-uuid> <provider-uuid> <name> <unit (per-hour|per-day)> <base-price> [--meta-hash <hex>] [--active <true|false>]' },
       { name: 'deactivate-sku', description: 'Deactivate a SKU', args: '<sku-uuid>' },
       { name: 'update-params', description: 'Update SKU module parameters (governance)', args: '<allowed-address>...' },
+    ],
+  },
+  group: {
+    description: 'Group module transaction subcommands',
+    handler: routeGroupTransaction,
+    subcommands: [
+      { name: 'create-group', description: 'Create a new group', args: '<metadata> <address:weight>...' },
+      { name: 'update-group-members', description: 'Update group members', args: '<group-id> <address:weight>...' },
+      { name: 'update-group-admin', description: 'Update group admin', args: '<group-id> <new-admin-address>' },
+      { name: 'update-group-metadata', description: 'Update group metadata', args: '<group-id> <metadata>' },
+      { name: 'create-group-policy', description: 'Create a group policy', args: '<group-id> <metadata> <policy-type> <threshold-or-pct> <voting-period-secs> <min-execution-period-secs>' },
+      { name: 'update-group-policy-admin', description: 'Update group policy admin', args: '<group-policy-address> <new-admin-address>' },
+      { name: 'create-group-with-policy', description: 'Create a group with policy', args: '<group-metadata> <group-policy-metadata> <policy-type> <threshold-or-pct> <voting-period-secs> <min-execution-period-secs> [--group-policy-as-admin] <address:weight>...' },
+      { name: 'update-group-policy-decision-policy', description: 'Update group policy decision policy', args: '<group-policy-address> <policy-type> <threshold-or-pct> <voting-period-secs> <min-execution-period-secs>' },
+      { name: 'update-group-policy-metadata', description: 'Update group policy metadata', args: '<group-policy-address> <metadata>' },
+      { name: 'submit-proposal', description: 'Submit a group proposal', args: '<group-policy-address> <title> <summary> [--exec try] [--metadata <text>] [<message-json>...]' },
+      { name: 'withdraw-proposal', description: 'Withdraw a group proposal', args: '<proposal-id>' },
+      { name: 'vote', description: 'Vote on a group proposal', args: '<proposal-id> <option (yes|no|abstain|no_with_veto)> [--metadata <text>] [--exec try]' },
+      { name: 'exec', description: 'Execute a passed group proposal', args: '<proposal-id>' },
+      { name: 'leave-group', description: 'Leave a group', args: '<group-id>' },
     ],
   },
 };

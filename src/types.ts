@@ -405,6 +405,47 @@ export interface CreditEstimateResult {
   readonly estimate: unknown;
 }
 
+// Group query results
+export interface GroupInfoResult {
+  readonly info?: unknown;
+}
+
+export interface GroupPolicyInfoResult {
+  readonly info?: unknown;
+}
+
+export interface GroupMembersResult extends PaginatedResult {
+  readonly members: readonly unknown[];
+}
+
+export interface GroupsResult extends PaginatedResult {
+  readonly groups: readonly unknown[];
+}
+
+export interface GroupPoliciesResult extends PaginatedResult {
+  readonly groupPolicies: readonly unknown[];
+}
+
+export interface GroupProposalResult {
+  readonly proposal?: unknown;
+}
+
+export interface GroupProposalsResult extends PaginatedResult {
+  readonly proposals: readonly unknown[];
+}
+
+export interface GroupVoteResult {
+  readonly vote?: unknown;
+}
+
+export interface GroupVotesResult extends PaginatedResult {
+  readonly votes: readonly unknown[];
+}
+
+export interface GroupTallyResult {
+  readonly tally?: unknown;
+}
+
 // SKU query results
 export interface SkuParamsResult {
   readonly params?: unknown;
@@ -485,7 +526,17 @@ export type QueryResult =
   | ProviderResult
   | ProvidersResult
   | SkuResult
-  | SkusResult;
+  | SkusResult
+  | GroupInfoResult
+  | GroupPolicyInfoResult
+  | GroupMembersResult
+  | GroupsResult
+  | GroupPoliciesResult
+  | GroupProposalResult
+  | GroupProposalsResult
+  | GroupVoteResult
+  | GroupVotesResult
+  | GroupTallyResult;
 
 /**
  * Result from a Cosmos query

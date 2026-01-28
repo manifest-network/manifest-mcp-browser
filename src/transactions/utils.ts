@@ -49,6 +49,33 @@ export function extractFlag(
 }
 
 /**
+ * Result from extracting a boolean (valueless) flag from args
+ */
+export interface ExtractedBooleanFlag {
+  /** Whether the flag was present */
+  value: boolean;
+  /** Args with the flag removed */
+  remainingArgs: string[];
+}
+
+/**
+ * Extract a valueless boolean flag from args array.
+ * Returns { value: true, remainingArgs } if flag is present, { value: false, remainingArgs: args } otherwise.
+ *
+ * @param args - The arguments array to search
+ * @param flagName - The flag to look for (e.g., '--active-only')
+ * @returns Object with boolean value and filtered args
+ */
+export function extractBooleanFlag(args: string[], flagName: string): ExtractedBooleanFlag {
+  const flagIndex = args.indexOf(flagName);
+  if (flagIndex === -1) {
+    return { value: false, remainingArgs: args };
+  }
+  const remainingArgs = args.filter((_, index) => index !== flagIndex);
+  return { value: true, remainingArgs };
+}
+
+/**
  * Filter args to remove consumed flag indices
  */
 export function filterConsumedArgs(args: string[], consumedIndices: number[]): string[] {
@@ -285,6 +312,48 @@ export function parseBigIntWithCode(
  */
 export function parseBigInt(value: string, fieldName: string): bigint {
   return parseBigIntWithCode(value, fieldName, ManifestMCPErrorCode.TX_FAILED);
+}
+
+/**
+ * Interface for VoteOption-like enums from cosmos protobuf modules.
+ * Both cosmos.gov.v1.VoteOption and cosmos.group.v1.VoteOption share this shape.
+ */
+interface VoteOptionEnum {
+  VOTE_OPTION_YES: number;
+  VOTE_OPTION_ABSTAIN: number;
+  VOTE_OPTION_NO: number;
+  VOTE_OPTION_NO_WITH_VETO: number;
+}
+
+/**
+ * Parse a vote option string to its numeric enum value.
+ * Accepts case-insensitive strings or numeric identifiers.
+ *
+ * @param optionStr - Vote option string (yes, no, abstain, no_with_veto, or 1-4)
+ * @param voteOptionEnum - The VoteOption enum object from the relevant cosmos module
+ */
+export function parseVoteOption(optionStr: string, voteOptionEnum: VoteOptionEnum): number {
+  const option = optionStr.toLowerCase();
+  switch (option) {
+    case 'yes':
+    case '1':
+      return voteOptionEnum.VOTE_OPTION_YES;
+    case 'abstain':
+    case '2':
+      return voteOptionEnum.VOTE_OPTION_ABSTAIN;
+    case 'no':
+    case '3':
+      return voteOptionEnum.VOTE_OPTION_NO;
+    case 'no_with_veto':
+    case 'nowithveto':
+    case '4':
+      return voteOptionEnum.VOTE_OPTION_NO_WITH_VETO;
+    default:
+      throw new ManifestMCPError(
+        ManifestMCPErrorCode.TX_FAILED,
+        `Invalid vote option: ${optionStr}. Expected: yes, no, abstain, or no_with_veto`
+      );
+  }
 }
 
 /**
