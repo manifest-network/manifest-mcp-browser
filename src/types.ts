@@ -18,8 +18,6 @@ export interface ManifestMCPConfig {
   readonly rpcUrl: string;
   /** Gas price with denomination (e.g., "1.0umfx") */
   readonly gasPrice: string;
-  /** Gas adjustment multiplier (default: 1.3) */
-  readonly gasAdjustment?: number;
   /** Address prefix (e.g., "manifest") */
   readonly addressPrefix?: string;
   /** Rate limiting configuration */

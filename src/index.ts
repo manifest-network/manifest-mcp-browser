@@ -34,14 +34,10 @@ const SENSITIVE_FIELDS = new Set([
 
 /**
  * Parse raw args input into string array.
- * Handles both array and space-separated string inputs.
  */
 function parseArgs(rawArgs: unknown): string[] {
   if (Array.isArray(rawArgs)) {
     return rawArgs.map(String);
-  }
-  if (typeof rawArgs === 'string' && rawArgs.length > 0) {
-    return rawArgs.split(/\s+/);
   }
   return [];
 }
@@ -224,7 +220,7 @@ export class ManifestMCPServer {
     this.server = new Server(
       {
         name: '@manifest-network/manifest-mcp-browser',
-        version: '0.1.1',
+        version: '0.1.7',
       },
       {
         capabilities: {
@@ -338,10 +334,10 @@ export class ManifestMCPServer {
         const args = parseArgs(toolInput.args);
         const waitForConfirmation = (toolInput.wait_for_confirmation as boolean) || false;
 
-        if (!module || !subcommand || args.length === 0) {
+        if (!module || !subcommand) {
           throw new ManifestMCPError(
             ManifestMCPErrorCode.TX_FAILED,
-            'module, subcommand, and args are required'
+            'module and subcommand are required'
           );
         }
 
@@ -461,7 +457,6 @@ export async function createMnemonicServer(config: {
   chainId: string;
   rpcUrl: string;
   gasPrice: string;
-  gasAdjustment?: number;
   addressPrefix?: string;
   mnemonic: string;
 }): Promise<ManifestMCPServer> {

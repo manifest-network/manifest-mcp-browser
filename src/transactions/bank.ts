@@ -2,7 +2,7 @@ import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
 import { CosmosTxResult } from '../types.js';
 import { throwUnsupportedSubcommand } from '../modules.js';
-import { parseAmount, buildTxResult, validateAddress, validateMemo, validateArgsLength, extractFlag, parseColonPair, requireArgs } from './utils.js';
+import { parseAmount, buildTxResult, validateAddress, validateMemo, validateArgsLength, extractFlag, filterConsumedArgs, parseColonPair, requireArgs } from './utils.js';
 
 const { MsgSend, MsgMultiSend } = cosmos.bank.v1beta1;
 
@@ -20,13 +20,15 @@ export async function routeBankTransaction(
 
   switch (subcommand) {
     case 'send': {
-      requireArgs(args, 2, ['recipient-address', 'amount'], 'bank send');
-      const [recipientAddress, amountStr] = args;
+      // Extract optional flags before positional args
+      const memoFlag = extractFlag(args, '--memo', 'bank send');
+      const positionalArgs = filterConsumedArgs(args, memoFlag.consumedIndices);
+
+      requireArgs(positionalArgs, 2, ['recipient-address', 'amount'], 'bank send');
+      const [recipientAddress, amountStr] = positionalArgs;
       validateAddress(recipientAddress, 'recipient address');
       const { amount, denom } = parseAmount(amountStr);
-
-      // Extract optional memo from args
-      const { value: memo = '' } = extractFlag(args, '--memo', 'bank send');
+      const memo = memoFlag.value ?? '';
       if (memo) {
         validateMemo(memo);
       }

@@ -13,7 +13,6 @@ describe('createConfig', () => {
     expect(config.chainId).toBe('test-chain');
     expect(config.rpcUrl).toBe('https://example.com');
     expect(config.gasPrice).toBe('1.0umfx');
-    expect(config.gasAdjustment).toBe(1.3);
     expect(config.addressPrefix).toBe('manifest');
   });
 
@@ -22,11 +21,9 @@ describe('createConfig', () => {
       chainId: 'test-chain',
       rpcUrl: 'https://example.com',
       gasPrice: '1.0umfx',
-      gasAdjustment: 2.0,
       addressPrefix: 'custom',
     });
 
-    expect(config.gasAdjustment).toBe(2.0);
     expect(config.addressPrefix).toBe('custom');
   });
 
@@ -105,18 +102,6 @@ describe('validateConfig', () => {
 
     expect(result.valid).toBe(false);
     expect(result.errors.some(e => e.includes('gasPrice'))).toBe(true);
-  });
-
-  it('should validate optional gasAdjustment', () => {
-    const result = validateConfig({
-      chainId: 'test',
-      rpcUrl: 'https://example.com',
-      gasPrice: '1.0umfx',
-      gasAdjustment: -1,
-    });
-
-    expect(result.valid).toBe(false);
-    expect(result.errors.some(e => e.includes('gasAdjustment'))).toBe(true);
   });
 
   it('should validate optional addressPrefix', () => {

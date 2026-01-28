@@ -108,6 +108,8 @@ The server exposes the same five tools as `manifest-mcp`:
 | gov | proposal, proposals, vote, votes, deposit, deposits, tally, params |
 | auth | account, accounts, params, module-accounts, module-account-by-name, address-bytes-to-string, address-string-to-bytes, bech32-prefix, account-info |
 | billing | params, lease, leases, leases-by-tenant, leases-by-provider, leases-by-sku, credit-account, credit-accounts, credit-address, withdrawable-amount, provider-withdrawable, credit-estimate |
+| sku | params, provider, providers, sku, skus, skus-by-provider, provider-by-address |
+| group | group-info, group-policy-info, group-members, groups-by-admin, group-policies-by-group, group-policies-by-admin, proposal, proposals-by-group-policy, vote, votes-by-proposal, votes-by-voter, groups-by-member, tally, groups |
 
 ### Transaction Modules
 
@@ -117,8 +119,10 @@ The server exposes the same five tools as `manifest-mcp`:
 | staking | delegate, unbond (alias: undelegate), redelegate |
 | distribution | withdraw-rewards, set-withdraw-addr, fund-community-pool |
 | gov | vote, weighted-vote, deposit |
-| billing | fund-credit, create-lease, close-lease, withdraw |
+| billing | fund-credit, create-lease, close-lease, withdraw, create-lease-for-tenant, acknowledge-lease, reject-lease, cancel-lease, update-params |
 | manifest | payout, burn-held-balance |
+| sku | create-provider, update-provider, deactivate-provider, create-sku, update-sku, deactivate-sku, update-params |
+| group | create-group, update-group-members, update-group-admin, update-group-metadata, create-group-policy, update-group-policy-admin, create-group-with-policy, update-group-policy-decision-policy, update-group-policy-metadata, submit-proposal, withdraw-proposal, vote, exec, leave-group |
 
 ## Configuration
 
@@ -127,7 +131,6 @@ interface ManifestMCPConfig {
   chainId: string;        // Chain ID (e.g., "manifest-ledger-testnet")
   rpcUrl: string;         // RPC endpoint URL
   gasPrice: string;       // Gas price with denomination (e.g., "1.0umfx")
-  gasAdjustment?: number; // Gas adjustment multiplier (default: 1.3)
   addressPrefix?: string; // Address prefix (default: "manifest")
   rateLimit?: {
     requestsPerSecond?: number; // Max RPC requests per second (default: 10)

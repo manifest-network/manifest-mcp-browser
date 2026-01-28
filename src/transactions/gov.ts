@@ -2,7 +2,7 @@ import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult } from '../types.js';
 import { throwUnsupportedSubcommand } from '../modules.js';
-import { parseAmount, buildTxResult, parseBigInt, validateArgsLength, extractFlag, requireArgs, parseVoteOption } from './utils.js';
+import { parseAmount, buildTxResult, parseBigInt, validateArgsLength, extractFlag, filterConsumedArgs, requireArgs, parseVoteOption } from './utils.js';
 
 const { MsgVote, MsgDeposit, MsgVoteWeighted, VoteOption } = cosmos.gov.v1;
 
@@ -73,13 +73,15 @@ export async function routeGovTransaction(
 
   switch (subcommand) {
     case 'vote': {
-      requireArgs(args, 2, ['proposal-id', 'option'], 'gov vote');
-      const [proposalIdStr, optionStr] = args;
+      // Extract optional flags before positional args
+      const metadataFlag = extractFlag(args, '--metadata', 'gov vote');
+      const positionalArgs = filterConsumedArgs(args, metadataFlag.consumedIndices);
+
+      requireArgs(positionalArgs, 2, ['proposal-id', 'option'], 'gov vote');
+      const [proposalIdStr, optionStr] = positionalArgs;
       const proposalId = parseBigInt(proposalIdStr, 'proposal-id');
       const option = parseVoteOption(optionStr, VoteOption);
-
-      // Extract optional metadata from args
-      const { value: metadata = '' } = extractFlag(args, '--metadata', 'gov vote');
+      const metadata = metadataFlag.value ?? '';
 
       const msg = {
         typeUrl: '/cosmos.gov.v1.MsgVote',
