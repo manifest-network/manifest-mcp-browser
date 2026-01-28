@@ -50,8 +50,8 @@ export interface CosmosTxResult {
   readonly code: number;
   readonly height: string;
   readonly rawLog?: string;
-  confirmed?: boolean;
-  confirmationHeight?: string;
+  readonly confirmed?: boolean;
+  readonly confirmationHeight?: string;
   readonly gasUsed?: string;
   readonly gasWanted?: string;
   readonly events?: readonly {

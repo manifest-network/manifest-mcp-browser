@@ -220,7 +220,7 @@ export class ManifestMCPServer {
     this.server = new Server(
       {
         name: '@manifest-network/manifest-mcp-browser',
-        version: '0.1.7',
+        version: '0.1.8',
       },
       {
         capabilities: {

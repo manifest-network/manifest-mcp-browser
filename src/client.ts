@@ -129,9 +129,13 @@ export class CosmosClientManager {
   }
 
   /**
-   * Clear all cached instances (useful for testing or reconnection)
+   * Clear all cached instances (useful for testing or reconnection).
+   * Disconnects all clients before clearing to prevent connection leaks.
    */
   static clearInstances(): void {
+    for (const instance of CosmosClientManager.instances.values()) {
+      instance.disconnect();
+    }
     CosmosClientManager.instances.clear();
   }
 
