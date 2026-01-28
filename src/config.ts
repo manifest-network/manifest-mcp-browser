@@ -1,11 +1,6 @@
 import { ManifestMCPConfig, ManifestMCPError, ManifestMCPErrorCode } from './types.js';
 
 /**
- * Default gas adjustment multiplier
- */
-const DEFAULT_GAS_ADJUSTMENT = 1.3;
-
-/**
  * Default address prefix for Manifest Network
  */
 const DEFAULT_ADDRESS_PREFIX = 'manifest';
@@ -78,7 +73,6 @@ export function createConfig(input: ManifestMCPConfig): ManifestMCPConfig {
     chainId: input.chainId,
     rpcUrl: input.rpcUrl,
     gasPrice: input.gasPrice,
-    gasAdjustment: input.gasAdjustment ?? DEFAULT_GAS_ADJUSTMENT,
     addressPrefix: input.addressPrefix ?? DEFAULT_ADDRESS_PREFIX,
     rateLimit: {
       requestsPerSecond: input.rateLimit?.requestsPerSecond ?? DEFAULT_REQUESTS_PER_SECOND,
@@ -123,12 +117,6 @@ export function validateConfig(config: Partial<ManifestMCPConfig>): ValidationRe
   }
 
   // Optional fields
-  if (config.gasAdjustment !== undefined) {
-    if (typeof config.gasAdjustment !== 'number' || config.gasAdjustment <= 0) {
-      errors.push('gasAdjustment must be a positive number');
-    }
-  }
-
   if (config.addressPrefix !== undefined) {
     if (!/^[a-z]+$/.test(config.addressPrefix)) {
       errors.push('addressPrefix must be lowercase letters only');

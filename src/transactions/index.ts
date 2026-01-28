@@ -5,4 +5,5 @@ export { routeDistributionTransaction } from './distribution.js';
 export { routeGovTransaction } from './gov.js';
 export { routeBillingTransaction } from './billing.js';
 export { routeManifestTransaction } from './manifest.js';
+export { routeSkuTransaction } from './sku.js';
 export { routeGroupTransaction } from './group.js';
