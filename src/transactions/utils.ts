@@ -396,7 +396,7 @@ export function buildTxResult(
   result: Awaited<ReturnType<SigningStargateClient['signAndBroadcast']>>,
   waitForConfirmation: boolean
 ): CosmosTxResult {
-  const txResult: CosmosTxResult = {
+  return {
     module,
     subcommand,
     transactionHash: result.transactionHash,
@@ -406,12 +406,9 @@ export function buildTxResult(
     gasUsed: String(result.gasUsed),
     gasWanted: String(result.gasWanted),
     events: result.events,
+    ...(waitForConfirmation && {
+      confirmed: result.code === 0,
+      confirmationHeight: String(result.height),
+    }),
   };
-
-  if (waitForConfirmation) {
-    txResult.confirmed = result.code === 0;
-    txResult.confirmationHeight = String(result.height);
-  }
-
-  return txResult;
 }

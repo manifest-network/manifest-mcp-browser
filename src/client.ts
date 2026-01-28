@@ -129,9 +129,13 @@ export class CosmosClientManager {
   }
 
   /**
-   * Clear all cached instances (useful for testing or reconnection)
+   * Clear all cached instances (useful for testing or reconnection).
+   * Disconnects signing clients and releases query client references before clearing.
    */
   static clearInstances(): void {
+    for (const instance of CosmosClientManager.instances.values()) {
+      instance.disconnect();
+    }
     CosmosClientManager.instances.clear();
   }
 
@@ -274,7 +278,9 @@ export class CosmosClientManager {
   }
 
   /**
-   * Disconnect all clients
+   * Disconnect the signing client and release query client references.
+   * The query client's underlying HTTP transport is stateless and does not
+   * require an explicit disconnect.
    */
   disconnect(): void {
     if (this.signingClient) {

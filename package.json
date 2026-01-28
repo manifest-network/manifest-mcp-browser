@@ -16,7 +16,8 @@
     "dev": "tsc --watch",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "version": "node -e \"var v=require('./package.json').version;require('fs').writeFileSync('src/version.ts','export const VERSION = \\x27'+v+'\\x27;\\n')\" && git add src/version.ts"
   },
   "keywords": [
     "mcp",
@@ -36,9 +37,15 @@
     "dist"
   ],
   "dependencies": {
+    "@cosmjs/encoding": "0.32.4",
+    "@cosmjs/proto-signing": "0.32.4",
+    "@cosmjs/stargate": "npm:@manifest-network/stargate@0.32.4-ll.3",
     "@manifest-network/manifestjs": "2.2.0-billing-v2.1",
     "@modelcontextprotocol/sdk": "1.25.3",
     "limiter": "3.0.0"
+  },
+  "overrides": {
+    "@cosmjs/stargate": "npm:@manifest-network/stargate@0.32.4-ll.3"
   },
   "devDependencies": {
     "@types/node": "20.19.30",

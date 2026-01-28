@@ -15,6 +15,7 @@ import {
   ManifestMCPErrorCode,
 } from './types.js';
 import { createValidatedConfig } from './config.js';
+import { VERSION } from './version.js';
 
 /**
  * Sensitive field names that should be redacted from error responses
@@ -216,11 +217,10 @@ export class ManifestMCPServer {
     this.walletProvider = options.walletProvider;
     this.clientManager = CosmosClientManager.getInstance(this.config, this.walletProvider);
 
-    // Note: Keep version in sync with package.json
     this.server = new Server(
       {
         name: '@manifest-network/manifest-mcp-browser',
-        version: '0.1.7',
+        version: VERSION,
       },
       {
         capabilities: {
