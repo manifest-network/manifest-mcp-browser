@@ -156,6 +156,8 @@ export class CosmosClientManager {
         this.queryClient = await liftedinit.ClientFactory.createRPCQueryClient({
           rpcEndpoint: this.config.rpcUrl,
         });
+        // Clear promise after successful init - client check will short-circuit future calls
+        this.queryClientPromise = null;
         return this.queryClient;
       } catch (error) {
         // Clear promise on failure so retry is possible
@@ -212,6 +214,8 @@ export class CosmosClientManager {
             broadcastPollIntervalMs: DEFAULT_BROADCAST_POLL_INTERVAL_MS,
           }
         );
+        // Clear promise after successful init - client check will short-circuit future calls
+        this.signingClientPromise = null;
         return this.signingClient;
       } catch (error) {
         // Clear promise on failure so retry is possible

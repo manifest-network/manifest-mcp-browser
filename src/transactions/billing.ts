@@ -1,46 +1,13 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
-import { fromHex } from '@cosmjs/encoding';
 import { liftedinit } from '@manifest-network/manifestjs';
-import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult } from '../types.js';
-import { parseAmount, buildTxResult, parseBigInt, validateAddress, validateArgsLength, extractFlag, filterConsumedArgs, parseColonPair, requireArgs } from './utils.js';
+import { CosmosTxResult, ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
+import { parseAmount, buildTxResult, parseBigInt, validateAddress, validateArgsLength, extractFlag, filterConsumedArgs, parseColonPair, requireArgs, parseHexBytes } from './utils.js';
 import { getSubcommandUsage, throwUnsupportedSubcommand } from '../modules.js';
 
 const { MsgFundCredit, MsgCreateLease, MsgCloseLease, MsgWithdraw } = liftedinit.billing.v1;
 
 /** Maximum meta hash length in bytes (64 bytes for SHA-512) */
 const MAX_META_HASH_BYTES = 64;
-
-/**
- * Validate and parse a hex string into Uint8Array
- * Uses @cosmjs/encoding for hex validation and conversion
- */
-function parseMetaHash(hexString: string): Uint8Array {
-  // Check even length first to avoid fractional byte counts in error messages
-  if (hexString.length % 2 !== 0) {
-    throw new ManifestMCPError(
-      ManifestMCPErrorCode.TX_FAILED,
-      `Invalid meta-hash: hex string must have even length. Got ${hexString.length} characters.`
-    );
-  }
-
-  // Check max length (64 bytes = 128 hex chars)
-  const byteLength = hexString.length / 2;
-  if (byteLength > MAX_META_HASH_BYTES) {
-    throw new ManifestMCPError(
-      ManifestMCPErrorCode.TX_FAILED,
-      `Invalid meta-hash: exceeds maximum ${MAX_META_HASH_BYTES} bytes. Got ${byteLength} bytes (${hexString.length} hex chars).`
-    );
-  }
-
-  try {
-    return fromHex(hexString);
-  } catch (error) {
-    throw new ManifestMCPError(
-      ManifestMCPErrorCode.TX_FAILED,
-      `Invalid meta-hash: ${error instanceof Error ? error.message : String(error)}`
-    );
-  }
-}
 
 /**
  * Route billing transaction to appropriate handler
@@ -77,7 +44,7 @@ export async function routeBillingTransaction(
     case 'create-lease': {
       // Parse optional --meta-hash flag (can appear anywhere in args)
       const { value: metaHashHex, consumedIndices } = extractFlag(args, '--meta-hash', 'billing create-lease');
-      const metaHash = metaHashHex ? parseMetaHash(metaHashHex) : undefined;
+      const metaHash = metaHashHex ? parseHexBytes(metaHashHex, 'meta-hash', MAX_META_HASH_BYTES) : undefined;
 
       // Filter out --meta-hash and its value to get item args
       const itemArgs = filterConsumedArgs(args, consumedIndices);

@@ -56,6 +56,8 @@ npm run test:watch  # Run tests in watch mode
   - `requireArgs()` - Validate required argument count with helpful error messages
   - `parseAmount()` - Parse amount strings with helpful error hints
   - `parseBigIntWithCode()` - Base implementation used by both queries and transactions
+  - `parseHexBytes()` - Parse and validate hex strings to Uint8Array (browser-compatible via `@cosmjs/encoding`)
+  - `bytesToHex()` - Convert Uint8Array to hex string (browser-compatible via `@cosmjs/encoding`)
   - `validateAddress()` - Bech32 validation using `@cosmjs/encoding`
   - `validateMemo()` - Enforce 256 char limit (Cosmos SDK default)
   - `validateArgsLength()` - Enforce 100 args max to prevent DoS
@@ -74,7 +76,7 @@ Transaction: bank, staking, distribution, gov, billing, manifest
 - `@manifest-network/manifestjs` - Protobuf types, registries, RPC client factory, and enums (e.g., `VoteOption`)
 - `@modelcontextprotocol/sdk` - MCP server implementation
 - `@cosmjs/stargate` - Signing client, gas price parsing
-- `@cosmjs/encoding` - Bech32 address validation (`fromBech32`)
+- `@cosmjs/encoding` - Bech32 address validation (`fromBech32`), hex conversion (`fromHex`, `toHex`)
 - `@cosmjs/proto-signing` - Wallet and signer interfaces
 
 ### Security Features

@@ -1,11 +1,15 @@
 import { ManifestQueryClient } from '../client.js';
 import {
-  ManifestMCPError, ManifestMCPErrorCode,
+  ManifestMCPErrorCode,
   AuthAccountResult, AuthAccountsResult, AuthParamsResult, ModuleAccountsResult,
   AddressBytesToStringResult, AddressStringToBytesResult, Bech32PrefixResult, AccountInfoResult
 } from '../types.js';
 import { requireArgs, extractPaginationArgs } from './utils.js';
+import { parseHexBytes, bytesToHex } from '../transactions/utils.js';
 import { throwUnsupportedSubcommand } from '../modules.js';
+
+/** Maximum address bytes length (256 bytes, more than enough for any address) */
+const MAX_ADDRESS_BYTES = 256;
 
 /** Auth query result union type */
 type AuthQueryResult =
@@ -63,28 +67,7 @@ export async function routeAuthQuery(
 
     case 'address-bytes-to-string': {
       requireArgs(args, 1, ['address-bytes'], 'auth address-bytes-to-string');
-      const hexString = args[0];
-      // Validate hex format: must be valid hex characters with even length
-      if (!/^[0-9a-fA-F]*$/.test(hexString)) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          `Invalid hex string: "${hexString}". Must contain only hexadecimal characters (0-9, a-f, A-F)`
-        );
-      }
-      if (hexString.length % 2 !== 0) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          `Invalid hex string length: ${hexString.length}. Must have an even number of characters`
-        );
-      }
-      // Limit size to prevent DoS (256 bytes = 512 hex chars, more than enough for any address)
-      if (hexString.length > 512) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          `Hex string too long: ${hexString.length} characters. Maximum allowed: 512`
-        );
-      }
-      const addressBytes = new Uint8Array(Buffer.from(hexString, 'hex'));
+      const addressBytes = parseHexBytes(args[0], 'address-bytes', MAX_ADDRESS_BYTES, ManifestMCPErrorCode.QUERY_FAILED);
       const result = await auth.addressBytesToString({ addressBytes });
       return { addressString: result.addressString };
     }
@@ -93,7 +76,7 @@ export async function routeAuthQuery(
       requireArgs(args, 1, ['address-string'], 'auth address-string-to-bytes');
       const [addressString] = args;
       const result = await auth.addressStringToBytes({ addressString });
-      return { addressBytes: Buffer.from(result.addressBytes).toString('hex') };
+      return { addressBytes: bytesToHex(result.addressBytes) };
     }
 
     case 'bech32-prefix': {

@@ -1,5 +1,5 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
-import { fromBech32 } from '@cosmjs/encoding';
+import { fromBech32, fromHex, toHex } from '@cosmjs/encoding';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult } from '../types.js';
 
 /** Maximum number of arguments allowed */
@@ -188,6 +188,66 @@ export function validateMemo(memo: string): void {
       `Memo too long: ${memo.length} characters. Maximum allowed: ${MAX_MEMO_LENGTH}`
     );
   }
+}
+
+/**
+ * Parse and validate a hex string into Uint8Array.
+ * Uses @cosmjs/encoding for browser compatibility.
+ *
+ * @param hexString - The hex string to parse
+ * @param fieldName - Name of the field for error messages
+ * @param maxBytes - Maximum allowed byte length
+ * @param errorCode - Error code to use (defaults to TX_FAILED)
+ * @returns Uint8Array of the parsed bytes
+ */
+export function parseHexBytes(
+  hexString: string,
+  fieldName: string,
+  maxBytes: number,
+  errorCode: ManifestMCPErrorCode = ManifestMCPErrorCode.TX_FAILED
+): Uint8Array {
+  // Check for empty string
+  if (!hexString || hexString.trim() === '') {
+    throw new ManifestMCPError(
+      errorCode,
+      `Invalid ${fieldName}: empty value. Expected a hex string.`
+    );
+  }
+
+  // Check even length (each byte is 2 hex chars)
+  if (hexString.length % 2 !== 0) {
+    throw new ManifestMCPError(
+      errorCode,
+      `Invalid ${fieldName}: hex string must have even length. Got ${hexString.length} characters.`
+    );
+  }
+
+  // Check max length
+  const byteLength = hexString.length / 2;
+  if (byteLength > maxBytes) {
+    throw new ManifestMCPError(
+      errorCode,
+      `Invalid ${fieldName}: exceeds maximum ${maxBytes} bytes. Got ${byteLength} bytes (${hexString.length} hex chars).`
+    );
+  }
+
+  // Use @cosmjs/encoding for browser-compatible hex parsing
+  try {
+    return fromHex(hexString);
+  } catch (error) {
+    throw new ManifestMCPError(
+      errorCode,
+      `Invalid ${fieldName}: "${hexString}". Must contain only hexadecimal characters (0-9, a-f, A-F).`
+    );
+  }
+}
+
+/**
+ * Convert Uint8Array to hex string.
+ * Uses @cosmjs/encoding for browser compatibility.
+ */
+export function bytesToHex(bytes: Uint8Array): string {
+  return toHex(bytes);
 }
 
 /**

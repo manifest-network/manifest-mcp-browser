@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { toBech32 } from '@cosmjs/encoding';
-import { parseAmount, parseBigInt, extractFlag, filterConsumedArgs, parseColonPair, validateAddress, validateMemo, validateArgsLength, requireArgs } from './utils.js';
+import { parseAmount, parseBigInt, extractFlag, filterConsumedArgs, parseColonPair, validateAddress, validateMemo, validateArgsLength, requireArgs, parseHexBytes, bytesToHex } from './utils.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
 
 describe('parseAmount', () => {
@@ -429,5 +429,90 @@ describe('requireArgs', () => {
     } catch (error) {
       expect((error as ManifestMCPError).code).toBe(ManifestMCPErrorCode.QUERY_FAILED);
     }
+  });
+});
+
+describe('parseHexBytes', () => {
+  it('should parse valid hex strings', () => {
+    expect(parseHexBytes('deadbeef', 'test', 100)).toEqual(new Uint8Array([0xde, 0xad, 0xbe, 0xef]));
+    expect(parseHexBytes('00', 'test', 100)).toEqual(new Uint8Array([0x00]));
+    expect(parseHexBytes('ff', 'test', 100)).toEqual(new Uint8Array([0xff]));
+    expect(parseHexBytes('0123456789abcdef', 'test', 100)).toEqual(
+      new Uint8Array([0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef])
+    );
+  });
+
+  it('should be case-insensitive', () => {
+    expect(parseHexBytes('DEADBEEF', 'test', 100)).toEqual(new Uint8Array([0xde, 0xad, 0xbe, 0xef]));
+    expect(parseHexBytes('DeAdBeEf', 'test', 100)).toEqual(new Uint8Array([0xde, 0xad, 0xbe, 0xef]));
+  });
+
+  it('should throw for empty string', () => {
+    expect(() => parseHexBytes('', 'field', 100)).toThrow(ManifestMCPError);
+    expect(() => parseHexBytes('   ', 'field', 100)).toThrow(ManifestMCPError);
+  });
+
+  it('should throw for odd-length hex strings', () => {
+    expect(() => parseHexBytes('abc', 'field', 100)).toThrow(ManifestMCPError);
+    expect(() => parseHexBytes('1', 'field', 100)).toThrow(ManifestMCPError);
+    expect(() => parseHexBytes('12345', 'field', 100)).toThrow(ManifestMCPError);
+  });
+
+  it('should throw for exceeding max bytes', () => {
+    expect(() => parseHexBytes('deadbeef', 'field', 2)).toThrow(ManifestMCPError);
+    expect(() => parseHexBytes('0102030405', 'field', 2)).toThrow(ManifestMCPError);
+  });
+
+  it('should accept exactly max bytes', () => {
+    expect(parseHexBytes('deadbeef', 'test', 4)).toEqual(new Uint8Array([0xde, 0xad, 0xbe, 0xef]));
+  });
+
+  it('should throw for invalid hex characters', () => {
+    expect(() => parseHexBytes('ghij', 'field', 100)).toThrow(ManifestMCPError);
+    expect(() => parseHexBytes('12gg', 'field', 100)).toThrow(ManifestMCPError);
+    expect(() => parseHexBytes('xy00', 'field', 100)).toThrow(ManifestMCPError);
+  });
+
+  it('should use TX_FAILED error code by default', () => {
+    try {
+      parseHexBytes('', 'field', 100);
+    } catch (error) {
+      expect((error as ManifestMCPError).code).toBe(ManifestMCPErrorCode.TX_FAILED);
+    }
+  });
+
+  it('should accept custom error code', () => {
+    try {
+      parseHexBytes('', 'field', 100, ManifestMCPErrorCode.QUERY_FAILED);
+    } catch (error) {
+      expect((error as ManifestMCPError).code).toBe(ManifestMCPErrorCode.QUERY_FAILED);
+    }
+  });
+
+  it('should include field name in error message', () => {
+    try {
+      parseHexBytes('', 'my-custom-field', 100);
+    } catch (error) {
+      expect((error as ManifestMCPError).message).toContain('my-custom-field');
+    }
+  });
+});
+
+describe('bytesToHex', () => {
+  it('should convert bytes to hex string', () => {
+    expect(bytesToHex(new Uint8Array([0xde, 0xad, 0xbe, 0xef]))).toBe('deadbeef');
+    expect(bytesToHex(new Uint8Array([0x00]))).toBe('00');
+    expect(bytesToHex(new Uint8Array([0xff]))).toBe('ff');
+    expect(bytesToHex(new Uint8Array([0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef]))).toBe('0123456789abcdef');
+  });
+
+  it('should handle empty array', () => {
+    expect(bytesToHex(new Uint8Array([]))).toBe('');
+  });
+
+  it('should round-trip with parseHexBytes', () => {
+    const original = 'deadbeefcafe1234';
+    const bytes = parseHexBytes(original, 'test', 100);
+    expect(bytesToHex(bytes)).toBe(original);
   });
 });
