@@ -63,14 +63,16 @@ npm run test:watch  # Run tests in watch mode
   - `validateArgsLength()` - Enforce 100 args max to prevent DoS
   - `extractFlag()` - Extract `--flag value` pairs from args
   - `buildTxResult()` - Build transaction result objects
+  - `parseVoteOption()` - Parse vote option strings to enum values (shared by gov and group)
+  - `extractBooleanFlag()` - Extract valueless boolean flags from args (e.g., `--active-only`)
   - `MAX_META_HASH_BYTES` - Shared constant for meta hash validation (64 bytes)
 
 **modules.ts** - Static registry of all supported modules and subcommands (no dynamic CLI discovery)
 
 ### Supported Modules
 
-Query: bank, staking, distribution, gov, auth, billing, sku
-Transaction: bank, staking, distribution, gov, billing, manifest, sku
+Query: bank, staking, distribution, gov, auth, billing, sku, group
+Transaction: bank, staking, distribution, gov, billing, manifest, sku, group
 
 ### Key Dependencies
 

@@ -14,3 +14,4 @@ export { routeDistributionQuery } from './distribution.js';
 export { routeGovQuery } from './gov.js';
 export { routeAuthQuery } from './auth.js';
 export { routeBillingQuery } from './billing.js';
+export { routeGroupQuery } from './group.js';

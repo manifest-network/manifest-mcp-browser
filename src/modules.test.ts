@@ -29,6 +29,7 @@ describe('getAvailableModules', () => {
     expect(queryNames).toContain('auth');
     expect(queryNames).toContain('billing');
     expect(queryNames).toContain('sku');
+    expect(queryNames).toContain('group');
   });
 
   it('should include expected tx modules', () => {
@@ -42,6 +43,7 @@ describe('getAvailableModules', () => {
     expect(txNames).toContain('billing');
     expect(txNames).toContain('manifest');
     expect(txNames).toContain('sku');
+    expect(txNames).toContain('group');
   });
 });
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { toBech32 } from '@cosmjs/encoding';
-import { parseAmount, parseBigInt, extractFlag, filterConsumedArgs, parseColonPair, validateAddress, validateMemo, validateArgsLength, requireArgs, parseHexBytes, bytesToHex } from './utils.js';
+import { parseAmount, parseBigInt, extractFlag, extractBooleanFlag, filterConsumedArgs, parseColonPair, validateAddress, validateMemo, validateArgsLength, requireArgs, parseHexBytes, bytesToHex, parseVoteOption } from './utils.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
 
 describe('parseAmount', () => {
@@ -514,5 +514,113 @@ describe('bytesToHex', () => {
     const original = 'deadbeefcafe1234';
     const bytes = parseHexBytes(original, 'test', 100);
     expect(bytesToHex(bytes)).toBe(original);
+  });
+});
+
+describe('extractBooleanFlag', () => {
+  it('should return true and filtered args when flag is present', () => {
+    const result = extractBooleanFlag(['arg1', '--active-only', 'arg2'], '--active-only');
+    expect(result.value).toBe(true);
+    expect(result.remainingArgs).toEqual(['arg1', 'arg2']);
+  });
+
+  it('should return false and original args when flag is absent', () => {
+    const args = ['arg1', 'arg2'];
+    const result = extractBooleanFlag(args, '--active-only');
+    expect(result.value).toBe(false);
+    expect(result.remainingArgs).toEqual(['arg1', 'arg2']);
+  });
+
+  it('should handle flag at the beginning', () => {
+    const result = extractBooleanFlag(['--flag', 'a', 'b'], '--flag');
+    expect(result.value).toBe(true);
+    expect(result.remainingArgs).toEqual(['a', 'b']);
+  });
+
+  it('should handle flag at the end', () => {
+    const result = extractBooleanFlag(['a', 'b', '--flag'], '--flag');
+    expect(result.value).toBe(true);
+    expect(result.remainingArgs).toEqual(['a', 'b']);
+  });
+
+  it('should handle flag as only argument', () => {
+    const result = extractBooleanFlag(['--flag'], '--flag');
+    expect(result.value).toBe(true);
+    expect(result.remainingArgs).toEqual([]);
+  });
+
+  it('should handle empty args', () => {
+    const result = extractBooleanFlag([], '--flag');
+    expect(result.value).toBe(false);
+    expect(result.remainingArgs).toEqual([]);
+  });
+
+  it('should only remove the first occurrence', () => {
+    const result = extractBooleanFlag(['--flag', 'a', '--flag'], '--flag');
+    expect(result.value).toBe(true);
+    // indexOf finds the first occurrence at index 0, only that is removed
+    expect(result.remainingArgs).toEqual(['a', '--flag']);
+  });
+});
+
+describe('parseVoteOption', () => {
+  // Mock VoteOption enum matching the cosmos.gov.v1 / cosmos.group.v1 shape
+  const mockVoteOption = {
+    VOTE_OPTION_YES: 1,
+    VOTE_OPTION_ABSTAIN: 2,
+    VOTE_OPTION_NO: 3,
+    VOTE_OPTION_NO_WITH_VETO: 4,
+  };
+
+  it('should parse string vote options (case-insensitive)', () => {
+    expect(parseVoteOption('yes', mockVoteOption)).toBe(1);
+    expect(parseVoteOption('YES', mockVoteOption)).toBe(1);
+    expect(parseVoteOption('Yes', mockVoteOption)).toBe(1);
+    expect(parseVoteOption('no', mockVoteOption)).toBe(3);
+    expect(parseVoteOption('abstain', mockVoteOption)).toBe(2);
+    expect(parseVoteOption('no_with_veto', mockVoteOption)).toBe(4);
+    expect(parseVoteOption('nowithveto', mockVoteOption)).toBe(4);
+  });
+
+  it('should parse numeric vote options', () => {
+    expect(parseVoteOption('1', mockVoteOption)).toBe(1);
+    expect(parseVoteOption('2', mockVoteOption)).toBe(2);
+    expect(parseVoteOption('3', mockVoteOption)).toBe(3);
+    expect(parseVoteOption('4', mockVoteOption)).toBe(4);
+  });
+
+  it('should use enum values from the provided object', () => {
+    // Verify it actually uses the enum values, not hardcoded numbers
+    const customEnum = {
+      VOTE_OPTION_YES: 10,
+      VOTE_OPTION_ABSTAIN: 20,
+      VOTE_OPTION_NO: 30,
+      VOTE_OPTION_NO_WITH_VETO: 40,
+    };
+    expect(parseVoteOption('yes', customEnum)).toBe(10);
+    expect(parseVoteOption('no', customEnum)).toBe(30);
+  });
+
+  it('should throw ManifestMCPError for invalid option', () => {
+    expect(() => parseVoteOption('invalid', mockVoteOption)).toThrow(ManifestMCPError);
+    expect(() => parseVoteOption('maybe', mockVoteOption)).toThrow(ManifestMCPError);
+    expect(() => parseVoteOption('0', mockVoteOption)).toThrow(ManifestMCPError);
+    expect(() => parseVoteOption('5', mockVoteOption)).toThrow(ManifestMCPError);
+  });
+
+  it('should use TX_FAILED error code', () => {
+    try {
+      parseVoteOption('invalid', mockVoteOption);
+    } catch (error) {
+      expect((error as ManifestMCPError).code).toBe(ManifestMCPErrorCode.TX_FAILED);
+    }
+  });
+
+  it('should include the invalid option in error message', () => {
+    try {
+      parseVoteOption('badvalue', mockVoteOption);
+    } catch (error) {
+      expect((error as ManifestMCPError).message).toContain('badvalue');
+    }
   });
 });
