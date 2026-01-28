@@ -26,6 +26,10 @@
     "manifest",
     "browser"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/manifest-network/manifest-mcp-browser"
+  },
   "author": "Felix C. Morency",
   "license": "MIT",
   "dependencies": {
