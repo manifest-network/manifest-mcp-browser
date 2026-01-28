@@ -1,13 +1,14 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { liftedinit } from '@manifest-network/manifestjs';
 import { CosmosTxResult, ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
-import { parseAmount, buildTxResult, parseBigInt, validateAddress, validateArgsLength, extractFlag, filterConsumedArgs, parseColonPair, requireArgs, parseHexBytes } from './utils.js';
+import { parseAmount, buildTxResult, parseBigInt, validateAddress, validateArgsLength, extractFlag, filterConsumedArgs, parseColonPair, requireArgs, parseHexBytes, MAX_META_HASH_BYTES } from './utils.js';
 import { getSubcommandUsage, throwUnsupportedSubcommand } from '../modules.js';
 
-const { MsgFundCredit, MsgCreateLease, MsgCloseLease, MsgWithdraw } = liftedinit.billing.v1;
-
-/** Maximum meta hash length in bytes (64 bytes for SHA-512) */
-const MAX_META_HASH_BYTES = 64;
+const {
+  MsgFundCredit, MsgCreateLease, MsgCloseLease, MsgWithdraw,
+  MsgCreateLeaseForTenant, MsgAcknowledgeLease, MsgRejectLease, MsgCancelLease,
+  MsgUpdateParams,
+} = liftedinit.billing.v1;
 
 /**
  * Route billing transaction to appropriate handler
@@ -157,6 +158,126 @@ export async function routeBillingTransaction(
 
       const result = await client.signAndBroadcast(senderAddress, [msg], 'auto');
       return buildTxResult('billing', 'withdraw', result, waitForConfirmation);
+    }
+
+    case 'create-lease-for-tenant': {
+      // Parse optional --meta-hash flag
+      const { value: metaHashHex, consumedIndices } = extractFlag(args, '--meta-hash', 'billing create-lease-for-tenant');
+      const metaHash = metaHashHex ? parseHexBytes(metaHashHex, 'meta-hash', MAX_META_HASH_BYTES) : undefined;
+
+      // Filter out --meta-hash and its value to get remaining args
+      const remainingArgs = filterConsumedArgs(args, consumedIndices);
+      requireArgs(remainingArgs, 2, ['tenant-address', 'sku-uuid:quantity'], 'billing create-lease-for-tenant');
+
+      const [tenant, ...itemArgs] = remainingArgs;
+      validateAddress(tenant, 'tenant address');
+
+      // Parse items (format: sku-uuid:quantity ...)
+      const items = itemArgs.map((arg) => {
+        const [skuUuid, quantityStr] = parseColonPair(arg, 'sku-uuid', 'quantity', 'lease item');
+        return { skuUuid, quantity: parseBigInt(quantityStr, 'quantity') };
+      });
+
+      const msg = {
+        typeUrl: '/liftedinit.billing.v1.MsgCreateLeaseForTenant',
+        value: MsgCreateLeaseForTenant.fromPartial({
+          authority: senderAddress,
+          tenant,
+          items,
+          metaHash: metaHash ?? new Uint8Array(),
+        }),
+      };
+
+      const result = await client.signAndBroadcast(senderAddress, [msg], 'auto');
+      return buildTxResult('billing', 'create-lease-for-tenant', result, waitForConfirmation);
+    }
+
+    case 'acknowledge-lease': {
+      requireArgs(args, 1, ['lease-uuid'], 'billing acknowledge-lease');
+      const leaseUuids = args;
+
+      const msg = {
+        typeUrl: '/liftedinit.billing.v1.MsgAcknowledgeLease',
+        value: MsgAcknowledgeLease.fromPartial({
+          sender: senderAddress,
+          leaseUuids,
+        }),
+      };
+
+      const result = await client.signAndBroadcast(senderAddress, [msg], 'auto');
+      return buildTxResult('billing', 'acknowledge-lease', result, waitForConfirmation);
+    }
+
+    case 'reject-lease': {
+      // Parse optional --reason flag
+      const { value: reason, consumedIndices } = extractFlag(args, '--reason', 'billing reject-lease');
+      const leaseArgs = filterConsumedArgs(args, consumedIndices);
+      requireArgs(leaseArgs, 1, ['lease-uuid'], 'billing reject-lease');
+
+      const leaseUuids = leaseArgs;
+
+      const msg = {
+        typeUrl: '/liftedinit.billing.v1.MsgRejectLease',
+        value: MsgRejectLease.fromPartial({
+          sender: senderAddress,
+          leaseUuids,
+          reason: reason ?? '',
+        }),
+      };
+
+      const result = await client.signAndBroadcast(senderAddress, [msg], 'auto');
+      return buildTxResult('billing', 'reject-lease', result, waitForConfirmation);
+    }
+
+    case 'cancel-lease': {
+      requireArgs(args, 1, ['lease-uuid'], 'billing cancel-lease');
+      const leaseUuids = args;
+
+      const msg = {
+        typeUrl: '/liftedinit.billing.v1.MsgCancelLease',
+        value: MsgCancelLease.fromPartial({
+          tenant: senderAddress,
+          leaseUuids,
+        }),
+      };
+
+      const result = await client.signAndBroadcast(senderAddress, [msg], 'auto');
+      return buildTxResult('billing', 'cancel-lease', result, waitForConfirmation);
+    }
+
+    case 'update-params': {
+      requireArgs(args, 5, [
+        'max-leases-per-tenant', 'max-items-per-lease', 'min-lease-duration',
+        'max-pending-leases-per-tenant', 'pending-timeout',
+      ], 'billing update-params');
+
+      const [
+        maxLeasesPerTenantStr, maxItemsPerLeaseStr, minLeaseDurationStr,
+        maxPendingLeasesPerTenantStr, pendingTimeoutStr,
+        ...allowedAddresses
+      ] = args;
+
+      for (const addr of allowedAddresses) {
+        validateAddress(addr, 'allowed address');
+      }
+
+      const msg = {
+        typeUrl: '/liftedinit.billing.v1.MsgUpdateParams',
+        value: MsgUpdateParams.fromPartial({
+          authority: senderAddress,
+          params: {
+            maxLeasesPerTenant: parseBigInt(maxLeasesPerTenantStr, 'max-leases-per-tenant'),
+            maxItemsPerLease: parseBigInt(maxItemsPerLeaseStr, 'max-items-per-lease'),
+            minLeaseDuration: parseBigInt(minLeaseDurationStr, 'min-lease-duration'),
+            maxPendingLeasesPerTenant: parseBigInt(maxPendingLeasesPerTenantStr, 'max-pending-leases-per-tenant'),
+            pendingTimeout: parseBigInt(pendingTimeoutStr, 'pending-timeout'),
+            allowedList: allowedAddresses,
+          },
+        }),
+      };
+
+      const result = await client.signAndBroadcast(senderAddress, [msg], 'auto');
+      return buildTxResult('billing', 'update-params', result, waitForConfirmation);
     }
 
     default:

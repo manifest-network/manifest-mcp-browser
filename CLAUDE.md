@@ -45,13 +45,13 @@ npm run test:watch  # Run tests in watch mode
 **queries/** - Module-specific query handlers
 - Each file exports `route{Module}Query()` function
 - Uses manifestjs RPC query client (`liftedinit.ClientFactory.createRPCQueryClient`)
-- Shared utilities in `utils.ts`: `parseBigInt()`, `parseInteger()`, `createPagination()`, `extractPaginationArgs()`
+- Shared utilities in `utils.ts`: `parseBigInt()`, `parseInteger()`, `createPagination()`, `extractPaginationArgs()`, `extractBooleanFlag()`
 - All paginated queries support `--limit` flag (default: 100, max: 1000)
 
 **transactions/** - Module-specific transaction handlers
 - Each file exports `route{Module}Transaction()` function
 - Uses CosmJS `SigningStargateClient` with Manifest registries
-- Uses manifestjs enums (e.g., `VoteOption` from `cosmos.gov.v1`)
+- Uses manifestjs enums (e.g., `VoteOption` from `cosmos.gov.v1`, `Unit` from `liftedinit.sku.v1`)
 - Shared utilities in `utils.ts`:
   - `requireArgs()` - Validate required argument count with helpful error messages
   - `parseAmount()` - Parse amount strings with helpful error hints
@@ -63,13 +63,14 @@ npm run test:watch  # Run tests in watch mode
   - `validateArgsLength()` - Enforce 100 args max to prevent DoS
   - `extractFlag()` - Extract `--flag value` pairs from args
   - `buildTxResult()` - Build transaction result objects
+  - `MAX_META_HASH_BYTES` - Shared constant for meta hash validation (64 bytes)
 
 **modules.ts** - Static registry of all supported modules and subcommands (no dynamic CLI discovery)
 
 ### Supported Modules
 
-Query: bank, staking, distribution, gov, auth, billing
-Transaction: bank, staking, distribution, gov, billing, manifest
+Query: bank, staking, distribution, gov, auth, billing, sku
+Transaction: bank, staking, distribution, gov, billing, manifest, sku
 
 ### Key Dependencies
 

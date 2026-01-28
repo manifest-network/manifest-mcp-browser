@@ -5,6 +5,9 @@ import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult } from '../types
 /** Maximum number of arguments allowed */
 export const MAX_ARGS = 100;
 
+/** Maximum meta hash length in bytes (64 bytes for SHA-512) */
+export const MAX_META_HASH_BYTES = 64;
+
 /**
  * Result from extracting a flag from args
  */

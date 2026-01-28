@@ -1,6 +1,33 @@
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
 import { parseBigIntWithCode, requireArgs as requireArgsBase, extractFlag, filterConsumedArgs } from '../transactions/utils.js';
 
+/**
+ * Result from extracting a boolean (valueless) flag from args
+ */
+export interface ExtractedBooleanFlag {
+  /** Whether the flag was present */
+  value: boolean;
+  /** Args with the flag removed */
+  remainingArgs: string[];
+}
+
+/**
+ * Extract a valueless boolean flag from args array.
+ * Returns { value: true, remainingArgs } if flag is present, { value: false, remainingArgs: args } otherwise.
+ *
+ * @param args - The arguments array to search
+ * @param flagName - The flag to look for (e.g., '--active-only')
+ * @returns Object with boolean value and filtered args
+ */
+export function extractBooleanFlag(args: string[], flagName: string): ExtractedBooleanFlag {
+  const flagIndex = args.indexOf(flagName);
+  if (flagIndex === -1) {
+    return { value: false, remainingArgs: args };
+  }
+  const remainingArgs = args.filter((_, index) => index !== flagIndex);
+  return { value: true, remainingArgs };
+}
+
 /** Default page size limit for paginated queries to prevent resource exhaustion */
 export const DEFAULT_PAGE_LIMIT = BigInt(100);
 

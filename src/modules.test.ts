@@ -28,6 +28,7 @@ describe('getAvailableModules', () => {
     expect(queryNames).toContain('gov');
     expect(queryNames).toContain('auth');
     expect(queryNames).toContain('billing');
+    expect(queryNames).toContain('sku');
   });
 
   it('should include expected tx modules', () => {
@@ -40,6 +41,7 @@ describe('getAvailableModules', () => {
     expect(txNames).toContain('gov');
     expect(txNames).toContain('billing');
     expect(txNames).toContain('manifest');
+    expect(txNames).toContain('sku');
   });
 });
 
