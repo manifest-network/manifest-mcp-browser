@@ -1,6 +1,7 @@
 import { ManifestQueryClient } from '../client.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
 import { parseBigInt, parseInt, defaultPagination } from './utils.js';
+import { throwUnsupportedSubcommand } from '../modules.js';
 
 /**
  * Route gov query to manifestjs query client
@@ -108,21 +109,6 @@ export async function routeGovQuery(
     }
 
     default:
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.UNSUPPORTED_QUERY,
-        `Unsupported gov query subcommand: ${subcommand}`,
-        {
-          availableSubcommands: [
-            'proposal',
-            'proposals',
-            'vote',
-            'votes',
-            'deposit',
-            'deposits',
-            'tally',
-            'params',
-          ],
-        }
-      );
+      throwUnsupportedSubcommand('query', 'gov', subcommand);
   }
 }

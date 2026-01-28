@@ -1,7 +1,8 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { liftedinit } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
-import { parseAmount, buildTxResult, validateAddress, validateArgsLength } from './utils.js';
+import { throwUnsupportedSubcommand } from '../modules.js';
+import { parseAmount, buildTxResult, validateAddress, validateArgsLength, parseColonPair } from './utils.js';
 
 const { MsgPayout, MsgBurnHeldBalance } = liftedinit.manifest.v1;
 
@@ -29,13 +30,7 @@ export async function routeManifestTransaction(
 
       // Parse payout pairs (format: address:amount ...)
       const payoutPairs = args.map((arg) => {
-        const [address, amountStr] = arg.split(':');
-        if (!address || !amountStr) {
-          throw new ManifestMCPError(
-            ManifestMCPErrorCode.TX_FAILED,
-            `Invalid payout pair format: ${arg}. Expected format: address:amount`
-          );
-        }
+        const [address, amountStr] = parseColonPair(arg, 'address', 'amount', 'payout pair');
         validateAddress(address, 'payout recipient address');
         const { amount, denom } = parseAmount(amountStr);
         return { address, coin: { denom, amount } };
@@ -80,10 +75,6 @@ export async function routeManifestTransaction(
     }
 
     default:
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.UNSUPPORTED_TX,
-        `Unsupported manifest transaction subcommand: ${subcommand}`,
-        { availableSubcommands: ['payout', 'burn-held-balance'] }
-      );
+      throwUnsupportedSubcommand('tx', 'manifest', subcommand);
   }
 }

@@ -1,6 +1,7 @@
 import { ManifestQueryClient } from '../client.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
 import { parseBigInt, defaultPagination } from './utils.js';
+import { throwUnsupportedSubcommand } from '../modules.js';
 
 /**
  * Route staking query to manifestjs query client
@@ -166,25 +167,6 @@ export async function routeStakingQuery(
     }
 
     default:
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.UNSUPPORTED_QUERY,
-        `Unsupported staking query subcommand: ${subcommand}`,
-        {
-          availableSubcommands: [
-            'delegation',
-            'delegations',
-            'unbonding-delegation',
-            'unbonding-delegations',
-            'redelegations',
-            'validator',
-            'validators',
-            'validator-delegations',
-            'validator-unbonding-delegations',
-            'pool',
-            'params',
-            'historical-info',
-          ],
-        }
-      );
+      throwUnsupportedSubcommand('query', 'staking', subcommand);
   }
 }

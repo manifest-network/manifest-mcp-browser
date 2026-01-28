@@ -1,6 +1,7 @@
 import { ManifestQueryClient } from '../client.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
 import { parseBigInt, defaultPagination } from './utils.js';
+import { throwUnsupportedSubcommand } from '../modules.js';
 
 /**
  * Route billing module query to manifestjs query client
@@ -140,25 +141,6 @@ export async function routeBillingQuery(
     }
 
     default:
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.UNSUPPORTED_QUERY,
-        `Unsupported billing query subcommand: ${subcommand}`,
-        {
-          availableSubcommands: [
-            'params',
-            'lease',
-            'leases',
-            'leases-by-tenant',
-            'leases-by-provider',
-            'leases-by-sku',
-            'credit-account',
-            'credit-accounts',
-            'credit-address',
-            'withdrawable-amount',
-            'provider-withdrawable',
-            'credit-estimate',
-          ],
-        }
-      );
+      throwUnsupportedSubcommand('query', 'billing', subcommand);
   }
 }

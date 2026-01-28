@@ -1,6 +1,7 @@
 import { ManifestQueryClient } from '../client.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
 import { parseBigInt, defaultPagination } from './utils.js';
+import { throwUnsupportedSubcommand } from '../modules.js';
 
 /**
  * Route distribution query to manifestjs query client
@@ -118,21 +119,6 @@ export async function routeDistributionQuery(
     }
 
     default:
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.UNSUPPORTED_QUERY,
-        `Unsupported distribution query subcommand: ${subcommand}`,
-        {
-          availableSubcommands: [
-            'rewards',
-            'commission',
-            'community-pool',
-            'params',
-            'validator-outstanding-rewards',
-            'slashes',
-            'delegator-validators',
-            'delegator-withdraw-address',
-          ],
-        }
-      );
+      throwUnsupportedSubcommand('query', 'distribution', subcommand);
   }
 }

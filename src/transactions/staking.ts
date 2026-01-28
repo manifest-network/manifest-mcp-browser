@@ -1,6 +1,7 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
+import { throwUnsupportedSubcommand } from '../modules.js';
 import { parseAmount, buildTxResult, validateAddress, validateArgsLength } from './utils.js';
 
 const { MsgDelegate, MsgUndelegate, MsgBeginRedelegate } = cosmos.staking.v1beta1;
@@ -98,10 +99,6 @@ export async function routeStakingTransaction(
     }
 
     default:
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.UNSUPPORTED_TX,
-        `Unsupported staking transaction subcommand: ${subcommand}`,
-        { availableSubcommands: ['delegate', 'unbond', 'redelegate'] }
-      );
+      throwUnsupportedSubcommand('tx', 'staking', subcommand);
   }
 }

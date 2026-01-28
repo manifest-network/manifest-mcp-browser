@@ -1,7 +1,8 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
-import { parseAmount, buildTxResult, parseBigInt, validateArgsLength } from './utils.js';
+import { throwUnsupportedSubcommand } from '../modules.js';
+import { parseAmount, buildTxResult, parseBigInt, validateArgsLength, extractFlag } from './utils.js';
 
 const { MsgVote, MsgDeposit, MsgVoteWeighted, VoteOption } = cosmos.gov.v1;
 
@@ -112,18 +113,7 @@ export async function routeGovTransaction(
       const option = parseVoteOption(optionStr);
 
       // Extract optional metadata from args
-      let metadata = '';
-      const metadataIndex = args.indexOf('--metadata');
-      if (metadataIndex !== -1) {
-        const metadataValue = args[metadataIndex + 1];
-        if (!metadataValue || metadataValue.startsWith('--')) {
-          throw new ManifestMCPError(
-            ManifestMCPErrorCode.TX_FAILED,
-            '--metadata flag requires a value'
-          );
-        }
-        metadata = metadataValue;
-      }
+      const { value: metadata = '' } = extractFlag(args, '--metadata', 'gov vote');
 
       const msg = {
         typeUrl: '/cosmos.gov.v1.MsgVote',
@@ -215,10 +205,6 @@ export async function routeGovTransaction(
     }
 
     default:
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.UNSUPPORTED_TX,
-        `Unsupported gov transaction subcommand: ${subcommand}`,
-        { availableSubcommands: ['vote', 'weighted-vote', 'deposit'] }
-      );
+      throwUnsupportedSubcommand('tx', 'gov', subcommand);
   }
 }

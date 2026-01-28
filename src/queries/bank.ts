@@ -1,6 +1,7 @@
 import { ManifestQueryClient } from '../client.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
 import { defaultPagination } from './utils.js';
+import { throwUnsupportedSubcommand } from '../modules.js';
 
 /**
  * Route bank query to manifestjs query client
@@ -96,22 +97,6 @@ export async function routeBankQuery(
     }
 
     default:
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.UNSUPPORTED_QUERY,
-        `Unsupported bank query subcommand: ${subcommand}`,
-        {
-          availableSubcommands: [
-            'balance',
-            'balances',
-            'spendable-balances',
-            'total-supply',
-            'supply-of',
-            'params',
-            'denom-metadata',
-            'denoms-metadata',
-            'send-enabled',
-          ],
-        }
-      );
+      throwUnsupportedSubcommand('query', 'bank', subcommand);
   }
 }

@@ -1,6 +1,7 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
+import { throwUnsupportedSubcommand } from '../modules.js';
 import { parseAmount, buildTxResult, validateAddress, validateArgsLength } from './utils.js';
 
 const { MsgWithdrawDelegatorReward, MsgSetWithdrawAddress, MsgFundCommunityPool } = cosmos.distribution.v1beta1;
@@ -89,10 +90,6 @@ export async function routeDistributionTransaction(
     }
 
     default:
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.UNSUPPORTED_TX,
-        `Unsupported distribution transaction subcommand: ${subcommand}`,
-        { availableSubcommands: ['withdraw-rewards', 'set-withdraw-addr', 'fund-community-pool'] }
-      );
+      throwUnsupportedSubcommand('tx', 'distribution', subcommand);
   }
 }

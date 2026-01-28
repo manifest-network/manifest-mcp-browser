@@ -1,6 +1,7 @@
 import { ManifestQueryClient } from '../client.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
 import { defaultPagination } from './utils.js';
+import { throwUnsupportedSubcommand } from '../modules.js';
 
 /**
  * Route auth query to manifestjs query client
@@ -115,22 +116,6 @@ export async function routeAuthQuery(
     }
 
     default:
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.UNSUPPORTED_QUERY,
-        `Unsupported auth query subcommand: ${subcommand}`,
-        {
-          availableSubcommands: [
-            'account',
-            'accounts',
-            'params',
-            'module-accounts',
-            'module-account-by-name',
-            'address-bytes-to-string',
-            'address-string-to-bytes',
-            'bech32-prefix',
-            'account-info',
-          ],
-        }
-      );
+      throwUnsupportedSubcommand('query', 'auth', subcommand);
   }
 }

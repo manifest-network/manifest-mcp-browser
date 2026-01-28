@@ -2,8 +2,8 @@ import { SigningStargateClient } from '@cosmjs/stargate';
 import { fromHex } from '@cosmjs/encoding';
 import { liftedinit } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
-import { parseAmount, buildTxResult, parseBigInt, validateAddress, validateArgsLength } from './utils.js';
-import { getSubcommandUsage } from '../modules.js';
+import { parseAmount, buildTxResult, parseBigInt, validateAddress, validateArgsLength, extractFlag, filterConsumedArgs, parseColonPair } from './utils.js';
+import { getSubcommandUsage, throwUnsupportedSubcommand } from '../modules.js';
 
 const { MsgFundCredit, MsgCreateLease, MsgCloseLease, MsgWithdraw } = liftedinit.billing.v1;
 
@@ -85,27 +85,11 @@ export async function routeBillingTransaction(
 
     case 'create-lease': {
       // Parse optional --meta-hash flag (can appear anywhere in args)
-      let metaHash: Uint8Array | undefined;
-      const metaHashIndex = args.indexOf('--meta-hash');
-
-      if (metaHashIndex !== -1) {
-        const hexHash = args[metaHashIndex + 1];
-        if (!hexHash || hexHash.startsWith('--')) {
-          const usage = getSubcommandUsage('tx', 'billing', 'create-lease');
-          throw new ManifestMCPError(
-            ManifestMCPErrorCode.TX_FAILED,
-            `--meta-hash flag requires a hex value. Usage: create-lease ${usage ?? '<args>'}`
-          );
-        }
-        // Validate and convert hex string to Uint8Array (max 64 bytes)
-        metaHash = parseMetaHash(hexHash);
-      }
+      const { value: metaHashHex, consumedIndices } = extractFlag(args, '--meta-hash', 'billing create-lease');
+      const metaHash = metaHashHex ? parseMetaHash(metaHashHex) : undefined;
 
       // Filter out --meta-hash and its value to get item args
-      const itemArgs = args.filter((_, index) => {
-        if (metaHashIndex === -1) return true;
-        return index !== metaHashIndex && index !== metaHashIndex + 1;
-      });
+      const itemArgs = filterConsumedArgs(args, consumedIndices);
 
       if (itemArgs.length < 1) {
         const usage = getSubcommandUsage('tx', 'billing', 'create-lease');
@@ -118,13 +102,7 @@ export async function routeBillingTransaction(
 
       // Parse items (format: sku-uuid:quantity ...)
       const items = itemArgs.map((arg) => {
-        const [skuUuid, quantityStr] = arg.split(':');
-        if (!skuUuid || !quantityStr) {
-          throw new ManifestMCPError(
-            ManifestMCPErrorCode.TX_FAILED,
-            `Invalid lease item format: ${arg}. Expected format: sku-uuid:quantity`
-          );
-        }
+        const [skuUuid, quantityStr] = parseColonPair(arg, 'sku-uuid', 'quantity', 'lease item');
         return { skuUuid, quantity: parseBigInt(quantityStr, 'quantity') };
       });
 
@@ -178,48 +156,32 @@ export async function routeBillingTransaction(
         );
       }
 
-      // Check if using provider-wide withdrawal
-      const providerFlagIndex = args.indexOf('--provider');
-      const limitFlagIndex = args.indexOf('--limit');
+      // Extract flags
+      const providerFlag = extractFlag(args, '--provider', 'billing withdraw');
+      const limitFlag = extractFlag(args, '--limit', 'billing withdraw');
+
       let leaseUuids: string[] = [];
       let providerUuid = '';
       let limit = BigInt(0); // 0 means use default (50)
 
-      if (providerFlagIndex !== -1) {
+      if (providerFlag.value) {
         // Provider-wide withdrawal mode
-        providerUuid = args[providerFlagIndex + 1] || '';
-        if (!providerUuid || providerUuid.startsWith('--')) {
-          throw new ManifestMCPError(
-            ManifestMCPErrorCode.TX_FAILED,
-            'withdraw with --provider flag requires provider-uuid argument'
-          );
-        }
-
-        // Track consumed arg indices to detect extra arguments
-        const consumedIndices = new Set<number>([providerFlagIndex, providerFlagIndex + 1]);
+        providerUuid = providerFlag.value;
 
         // Parse optional --limit flag (only valid with --provider)
-        if (limitFlagIndex !== -1) {
-          const limitStr = args[limitFlagIndex + 1] || '';
-          if (!limitStr || limitStr.startsWith('--')) {
-            throw new ManifestMCPError(
-              ManifestMCPErrorCode.TX_FAILED,
-              'withdraw with --limit flag requires a number argument (1-100)'
-            );
-          }
-          limit = parseBigInt(limitStr, 'limit');
+        if (limitFlag.value) {
+          limit = parseBigInt(limitFlag.value, 'limit');
           if (limit < BigInt(1) || limit > BigInt(100)) {
             throw new ManifestMCPError(
               ManifestMCPErrorCode.TX_FAILED,
               `Invalid limit: ${limit}. Must be between 1 and 100.`
             );
           }
-          consumedIndices.add(limitFlagIndex);
-          consumedIndices.add(limitFlagIndex + 1);
         }
 
         // Check for any extra arguments that weren't consumed
-        const extraArgs = args.filter((_, index) => !consumedIndices.has(index));
+        const allConsumed = [...providerFlag.consumedIndices, ...limitFlag.consumedIndices];
+        const extraArgs = filterConsumedArgs(args, allConsumed);
         if (extraArgs.length > 0) {
           const usage = getSubcommandUsage('tx', 'billing', 'withdraw');
           throw new ManifestMCPError(
@@ -231,7 +193,7 @@ export async function routeBillingTransaction(
         }
       } else {
         // Lease-specific withdrawal mode
-        // Check for unexpected flags
+        // Check for unexpected flags (--limit without --provider is invalid)
         const unexpectedFlags = args.filter(arg => arg.startsWith('--'));
         if (unexpectedFlags.length > 0) {
           const usage = getSubcommandUsage('tx', 'billing', 'withdraw');
@@ -260,10 +222,6 @@ export async function routeBillingTransaction(
     }
 
     default:
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.UNSUPPORTED_TX,
-        `Unsupported billing transaction subcommand: ${subcommand}`,
-        { availableSubcommands: ['fund-credit', 'create-lease', 'close-lease', 'withdraw'] }
-      );
+      throwUnsupportedSubcommand('tx', 'billing', subcommand);
   }
 }

@@ -1,6 +1,30 @@
 import { ModuleInfo, AvailableModules, ManifestMCPError, ManifestMCPErrorCode } from './types.js';
 
 /**
+ * Throw an error for an unsupported subcommand.
+ * Automatically looks up available subcommands from the module registry.
+ *
+ * @param type - 'query' or 'tx'
+ * @param module - The module name (e.g., 'bank', 'staking')
+ * @param subcommand - The unsupported subcommand that was requested
+ */
+export function throwUnsupportedSubcommand(
+  type: 'query' | 'tx',
+  module: string,
+  subcommand: string
+): never {
+  const registry = type === 'query' ? QUERY_MODULES : TX_MODULES;
+  const moduleInfo = registry[module];
+  const availableSubcommands = moduleInfo?.subcommands.map(s => s.name) ?? [];
+
+  throw new ManifestMCPError(
+    type === 'query' ? ManifestMCPErrorCode.UNSUPPORTED_QUERY : ManifestMCPErrorCode.UNSUPPORTED_TX,
+    `Unsupported ${module} ${type === 'query' ? 'query' : 'transaction'} subcommand: ${subcommand}`,
+    { availableSubcommands }
+  );
+}
+
+/**
  * Static module registry for browser-compatible module discovery
  * All modules use manifestjs for full protobuf support
  */

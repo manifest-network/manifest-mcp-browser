@@ -1,7 +1,8 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
 import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
-import { parseAmount, buildTxResult, validateAddress, validateMemo, validateArgsLength } from './utils.js';
+import { throwUnsupportedSubcommand } from '../modules.js';
+import { parseAmount, buildTxResult, validateAddress, validateMemo, validateArgsLength, extractFlag, parseColonPair } from './utils.js';
 
 const { MsgSend, MsgMultiSend } = cosmos.bank.v1beta1;
 
@@ -32,17 +33,8 @@ export async function routeBankTransaction(
       const { amount, denom } = parseAmount(amountStr);
 
       // Extract optional memo from args
-      let memo = '';
-      const memoIndex = args.indexOf('--memo');
-      if (memoIndex !== -1) {
-        const memoValue = args[memoIndex + 1];
-        if (!memoValue || memoValue.startsWith('--')) {
-          throw new ManifestMCPError(
-            ManifestMCPErrorCode.TX_FAILED,
-            '--memo flag requires a value'
-          );
-        }
-        memo = memoValue;
+      const { value: memo = '' } = extractFlag(args, '--memo', 'bank send');
+      if (memo) {
         validateMemo(memo);
       }
 
@@ -69,13 +61,7 @@ export async function routeBankTransaction(
 
       // Parse format: multi-send recipient1:amount1 recipient2:amount2 ...
       const outputs = args.map((arg) => {
-        const [address, amountStr] = arg.split(':');
-        if (!address || !amountStr) {
-          throw new ManifestMCPError(
-            ManifestMCPErrorCode.TX_FAILED,
-            `Invalid multi-send format: ${arg}. Expected format: address:amount`
-          );
-        }
+        const [address, amountStr] = parseColonPair(arg, 'address', 'amount', 'multi-send');
         validateAddress(address, 'recipient address');
         const { amount, denom } = parseAmount(amountStr);
         return { address, coins: [{ denom, amount }] };
@@ -108,10 +94,6 @@ export async function routeBankTransaction(
     }
 
     default:
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.UNSUPPORTED_TX,
-        `Unsupported bank transaction subcommand: ${subcommand}`,
-        { availableSubcommands: ['send', 'multi-send'] }
-      );
+      throwUnsupportedSubcommand('tx', 'bank', subcommand);
   }
 }

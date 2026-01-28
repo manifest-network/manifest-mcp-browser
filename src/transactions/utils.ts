@@ -5,8 +5,97 @@ import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult } from '../types
 /** Maximum number of arguments allowed */
 export const MAX_ARGS = 100;
 
+/**
+ * Result from extracting a flag from args
+ */
+export interface ExtractedFlag {
+  /** The flag value, or undefined if flag not present */
+  value: string | undefined;
+  /** Indices consumed by the flag and its value (for filtering) */
+  consumedIndices: number[];
+}
+
+/**
+ * Extract a flag value from args array.
+ * Returns { value, consumedIndices } or { value: undefined, consumedIndices: [] } if flag not present.
+ * Throws if flag is present but value is missing or looks like another flag.
+ *
+ * @param args - The arguments array to search
+ * @param flagName - The flag to look for (e.g., '--memo')
+ * @param context - Description for error messages (e.g., 'bank send')
+ */
+export function extractFlag(
+  args: string[],
+  flagName: string,
+  context: string
+): ExtractedFlag {
+  const flagIndex = args.indexOf(flagName);
+  if (flagIndex === -1) {
+    return { value: undefined, consumedIndices: [] };
+  }
+
+  const value = args[flagIndex + 1];
+  if (!value || value.startsWith('--')) {
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.TX_FAILED,
+      `${flagName} flag requires a value in ${context}`
+    );
+  }
+
+  return { value, consumedIndices: [flagIndex, flagIndex + 1] };
+}
+
+/**
+ * Filter args to remove consumed flag indices
+ */
+export function filterConsumedArgs(args: string[], consumedIndices: number[]): string[] {
+  if (consumedIndices.length === 0) {
+    return args;
+  }
+  const consumedSet = new Set(consumedIndices);
+  return args.filter((_, index) => !consumedSet.has(index));
+}
+
 /** Maximum memo length (Cosmos SDK default) */
 export const MAX_MEMO_LENGTH = 256;
+
+/**
+ * Parse a colon-separated pair (e.g., "address:amount", "sku:quantity").
+ * Throws with helpful error if format is invalid.
+ *
+ * @param input - The string to parse (e.g., "manifest1abc:1000umfx")
+ * @param leftName - Name of the left value for error messages (e.g., "address")
+ * @param rightName - Name of the right value for error messages (e.g., "amount")
+ * @param context - Context for error messages (e.g., "multi-send pair")
+ * @returns Tuple of [left, right] values
+ */
+export function parseColonPair(
+  input: string,
+  leftName: string,
+  rightName: string,
+  context: string
+): [string, string] {
+  const colonIndex = input.indexOf(':');
+  if (colonIndex === -1) {
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.TX_FAILED,
+      `Invalid ${context} format: "${input}". Missing colon separator. Expected format: ${leftName}:${rightName}`
+    );
+  }
+  if (colonIndex === 0) {
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.TX_FAILED,
+      `Invalid ${context} format: "${input}". Missing ${leftName}. Expected format: ${leftName}:${rightName}`
+    );
+  }
+  if (colonIndex === input.length - 1) {
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.TX_FAILED,
+      `Invalid ${context} format: "${input}". Missing ${rightName}. Expected format: ${leftName}:${rightName}`
+    );
+  }
+  return [input.slice(0, colonIndex), input.slice(colonIndex + 1)];
+}
 
 /**
  * Validate args array length
