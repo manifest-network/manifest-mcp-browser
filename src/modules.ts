@@ -9,6 +9,7 @@ import { routeDistributionQuery } from './queries/distribution.js';
 import { routeGovQuery } from './queries/gov.js';
 import { routeAuthQuery } from './queries/auth.js';
 import { routeBillingQuery } from './queries/billing.js';
+import { routeSkuQuery } from './queries/sku.js';
 
 // Import transaction handlers
 import { routeBankTransaction } from './transactions/bank.js';
@@ -17,6 +18,7 @@ import { routeDistributionTransaction } from './transactions/distribution.js';
 import { routeGovTransaction } from './transactions/gov.js';
 import { routeBillingTransaction } from './transactions/billing.js';
 import { routeManifestTransaction } from './transactions/manifest.js';
+import { routeSkuTransaction } from './transactions/sku.js';
 
 /**
  * Handler function type for query modules
@@ -189,6 +191,19 @@ const QUERY_MODULES: QueryModuleRegistry = {
       { name: 'credit-estimate', description: 'Query credit estimate for a tenant' },
     ],
   },
+  sku: {
+    description: 'Querying commands for the Manifest SKU module',
+    handler: routeSkuQuery,
+    subcommands: [
+      { name: 'params', description: 'Query SKU module parameters' },
+      { name: 'provider', description: 'Query a provider by UUID', args: '<provider-uuid>' },
+      { name: 'providers', description: 'Query all providers', args: '[--active-only] [--limit N]' },
+      { name: 'sku', description: 'Query a SKU by UUID', args: '<sku-uuid>' },
+      { name: 'skus', description: 'Query all SKUs', args: '[--active-only] [--limit N]' },
+      { name: 'skus-by-provider', description: 'Query SKUs by provider UUID', args: '<provider-uuid> [--active-only] [--limit N]' },
+      { name: 'provider-by-address', description: 'Query providers by address', args: '<address> [--active-only] [--limit N]' },
+    ],
+  },
 };
 
 /**
@@ -240,6 +255,11 @@ const TX_MODULES: TxModuleRegistry = {
       { name: 'create-lease', description: 'Create a new lease', args: '[--meta-hash <hex>] <sku-uuid:quantity>... (e.g., sku-123:1 sku-456:2)' },
       { name: 'close-lease', description: 'Close one or more leases', args: '[--reason <text>] <lease-uuid>... (e.g., lease-123 lease-456)' },
       { name: 'withdraw', description: 'Withdraw earnings from leases', args: '<lease-uuid>... OR --provider <provider-uuid> [--limit <1-100>]' },
+      { name: 'create-lease-for-tenant', description: 'Create a lease on behalf of a tenant', args: '<tenant-address> [--meta-hash <hex>] <sku-uuid:quantity>...' },
+      { name: 'acknowledge-lease', description: 'Acknowledge one or more pending leases', args: '<lease-uuid>...' },
+      { name: 'reject-lease', description: 'Reject one or more pending leases', args: '[--reason <text>] <lease-uuid>...' },
+      { name: 'cancel-lease', description: 'Cancel one or more pending leases', args: '<lease-uuid>...' },
+      { name: 'update-params', description: 'Update billing module parameters (governance)', args: '<max-leases-per-tenant> <max-items-per-lease> <min-lease-duration> <max-pending-leases-per-tenant> <pending-timeout> [<allowed-address>...]' },
     ],
   },
   manifest: {
@@ -248,6 +268,19 @@ const TX_MODULES: TxModuleRegistry = {
     subcommands: [
       { name: 'payout', description: 'Execute a payout to multiple addresses' },
       { name: 'burn-held-balance', description: 'Burn held balance' },
+    ],
+  },
+  sku: {
+    description: 'Manifest SKU module transaction subcommands',
+    handler: routeSkuTransaction,
+    subcommands: [
+      { name: 'create-provider', description: 'Create a new provider', args: '<address> <payout-address> <api-url> [--meta-hash <hex>]' },
+      { name: 'update-provider', description: 'Update an existing provider', args: '<provider-uuid> <address> <payout-address> <api-url> [--meta-hash <hex>] [--active <true|false>]' },
+      { name: 'deactivate-provider', description: 'Deactivate a provider', args: '<provider-uuid>' },
+      { name: 'create-sku', description: 'Create a new SKU', args: '<provider-uuid> <name> <unit (per-hour|per-day)> <base-price> [--meta-hash <hex>]' },
+      { name: 'update-sku', description: 'Update an existing SKU', args: '<sku-uuid> <provider-uuid> <name> <unit (per-hour|per-day)> <base-price> [--meta-hash <hex>] [--active <true|false>]' },
+      { name: 'deactivate-sku', description: 'Deactivate a SKU', args: '<sku-uuid>' },
+      { name: 'update-params', description: 'Update SKU module parameters (governance)', args: '<allowed-address>...' },
     ],
   },
 };

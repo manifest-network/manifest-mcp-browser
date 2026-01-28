@@ -405,6 +405,27 @@ export interface CreditEstimateResult {
   readonly estimate: unknown;
 }
 
+// SKU query results
+export interface SkuParamsResult {
+  readonly params?: unknown;
+}
+
+export interface ProviderResult {
+  readonly provider?: unknown;
+}
+
+export interface ProvidersResult extends PaginatedResult {
+  readonly providers: readonly unknown[];
+}
+
+export interface SkuResult {
+  readonly sku?: unknown;
+}
+
+export interface SkusResult extends PaginatedResult {
+  readonly skus: readonly unknown[];
+}
+
 /**
  * Union type of all query results for type-safe handling
  */
@@ -459,7 +480,12 @@ export type QueryResult =
   | CreditAddressResult
   | WithdrawableAmountResult
   | ProviderWithdrawableResult
-  | CreditEstimateResult;
+  | CreditEstimateResult
+  | SkuParamsResult
+  | ProviderResult
+  | ProvidersResult
+  | SkuResult
+  | SkusResult;
 
 /**
  * Result from a Cosmos query
