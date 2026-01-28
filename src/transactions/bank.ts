@@ -1,7 +1,8 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
-import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
-import { parseAmount, buildTxResult, validateAddress, validateMemo, validateArgsLength } from './utils.js';
+import { CosmosTxResult } from '../types.js';
+import { throwUnsupportedSubcommand } from '../modules.js';
+import { parseAmount, buildTxResult, validateAddress, validateMemo, validateArgsLength, extractFlag, parseColonPair, requireArgs } from './utils.js';
 
 const { MsgSend, MsgMultiSend } = cosmos.bank.v1beta1;
 
@@ -13,29 +14,20 @@ export async function routeBankTransaction(
   senderAddress: string,
   subcommand: string,
   args: string[],
-  _config: ManifestMCPConfig,
   waitForConfirmation: boolean
 ): Promise<CosmosTxResult> {
   validateArgsLength(args, 'bank transaction');
 
   switch (subcommand) {
     case 'send': {
-      if (args.length < 2) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          'send requires recipient-address and amount arguments'
-        );
-      }
-
+      requireArgs(args, 2, ['recipient-address', 'amount'], 'bank send');
       const [recipientAddress, amountStr] = args;
       validateAddress(recipientAddress, 'recipient address');
       const { amount, denom } = parseAmount(amountStr);
 
       // Extract optional memo from args
-      let memo = '';
-      const memoIndex = args.indexOf('--memo');
-      if (memoIndex !== -1 && args[memoIndex + 1]) {
-        memo = args[memoIndex + 1];
+      const { value: memo = '' } = extractFlag(args, '--memo', 'bank send');
+      if (memo) {
         validateMemo(memo);
       }
 
@@ -53,22 +45,10 @@ export async function routeBankTransaction(
     }
 
     case 'multi-send': {
-      if (args.length < 2) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          'multi-send requires at least one recipient:amount pair'
-        );
-      }
-
+      requireArgs(args, 1, ['recipient:amount'], 'bank multi-send');
       // Parse format: multi-send recipient1:amount1 recipient2:amount2 ...
       const outputs = args.map((arg) => {
-        const [address, amountStr] = arg.split(':');
-        if (!address || !amountStr) {
-          throw new ManifestMCPError(
-            ManifestMCPErrorCode.TX_FAILED,
-            `Invalid multi-send format: ${arg}. Expected format: address:amount`
-          );
-        }
+        const [address, amountStr] = parseColonPair(arg, 'address', 'amount', 'multi-send');
         validateAddress(address, 'recipient address');
         const { amount, denom } = parseAmount(amountStr);
         return { address, coins: [{ denom, amount }] };
@@ -101,10 +81,6 @@ export async function routeBankTransaction(
     }
 
     default:
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.UNSUPPORTED_TX,
-        `Unsupported bank transaction subcommand: ${subcommand}`,
-        { availableSubcommands: ['send', 'multi-send'] }
-      );
+      throwUnsupportedSubcommand('tx', 'bank', subcommand);
   }
 }

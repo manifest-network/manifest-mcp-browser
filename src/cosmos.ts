@@ -1,18 +1,6 @@
 import { CosmosClientManager } from './client.js';
 import { CosmosQueryResult, CosmosTxResult, ManifestMCPError, ManifestMCPErrorCode } from './types.js';
-import { getSupportedModules } from './modules.js';
-import { routeBankQuery } from './queries/bank.js';
-import { routeStakingQuery } from './queries/staking.js';
-import { routeDistributionQuery } from './queries/distribution.js';
-import { routeGovQuery } from './queries/gov.js';
-import { routeAuthQuery } from './queries/auth.js';
-import { routeBillingQuery } from './queries/billing.js';
-import { routeBankTransaction } from './transactions/bank.js';
-import { routeStakingTransaction } from './transactions/staking.js';
-import { routeDistributionTransaction } from './transactions/distribution.js';
-import { routeGovTransaction } from './transactions/gov.js';
-import { routeBillingTransaction } from './transactions/billing.js';
-import { routeManifestTransaction } from './transactions/manifest.js';
+import { getQueryHandler, getTxHandler } from './modules.js';
 
 // Validation pattern for module/subcommand names (alphanumeric, hyphens, underscores)
 // First character must not be a hyphen to prevent potential issues
@@ -29,11 +17,6 @@ function validateName(name: string, field: string): void {
     );
   }
 }
-
-// Get module lists from the authoritative registry
-const supportedModules = getSupportedModules();
-const QUERY_MODULES = Object.keys(supportedModules.query);
-const TX_MODULES = Object.keys(supportedModules.tx);
 
 /**
  * Execute a Cosmos query via manifestjs RPC client
@@ -52,35 +35,10 @@ export async function cosmosQuery(
 
   const queryClient = await clientManager.getQueryClient();
 
-  let result: Record<string, unknown>;
-
   try {
-    switch (module) {
-      case 'bank':
-        result = await routeBankQuery(queryClient, subcommand, args);
-        break;
-      case 'staking':
-        result = await routeStakingQuery(queryClient, subcommand, args);
-        break;
-      case 'distribution':
-        result = await routeDistributionQuery(queryClient, subcommand, args);
-        break;
-      case 'gov':
-        result = await routeGovQuery(queryClient, subcommand, args);
-        break;
-      case 'auth':
-        result = await routeAuthQuery(queryClient, subcommand, args);
-        break;
-      case 'billing':
-        result = await routeBillingQuery(queryClient, subcommand, args);
-        break;
-      default:
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.UNKNOWN_MODULE,
-          `Unknown query module: ${module}`,
-          { availableModules: QUERY_MODULES }
-        );
-    }
+    // Get handler from registry (throws if module not found)
+    const handler = getQueryHandler(module);
+    const result = await handler(queryClient, subcommand, args);
 
     return {
       module,
@@ -116,71 +74,17 @@ export async function cosmosTx(
 
   const signingClient = await clientManager.getSigningClient();
   const senderAddress = await clientManager.getAddress();
-  const config = clientManager.getConfig();
 
   try {
-    switch (module) {
-      case 'bank':
-        return await routeBankTransaction(
-          signingClient,
-          senderAddress,
-          subcommand,
-          args,
-          config,
-          waitForConfirmation
-        );
-      case 'staking':
-        return await routeStakingTransaction(
-          signingClient,
-          senderAddress,
-          subcommand,
-          args,
-          config,
-          waitForConfirmation
-        );
-      case 'distribution':
-        return await routeDistributionTransaction(
-          signingClient,
-          senderAddress,
-          subcommand,
-          args,
-          config,
-          waitForConfirmation
-        );
-      case 'gov':
-        return await routeGovTransaction(
-          signingClient,
-          senderAddress,
-          subcommand,
-          args,
-          config,
-          waitForConfirmation
-        );
-      case 'billing':
-        return await routeBillingTransaction(
-          signingClient,
-          senderAddress,
-          subcommand,
-          args,
-          config,
-          waitForConfirmation
-        );
-      case 'manifest':
-        return await routeManifestTransaction(
-          signingClient,
-          senderAddress,
-          subcommand,
-          args,
-          config,
-          waitForConfirmation
-        );
-      default:
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.UNKNOWN_MODULE,
-          `Unknown tx module: ${module}`,
-          { availableModules: TX_MODULES }
-        );
-    }
+    // Get handler from registry (throws if module not found)
+    const handler = getTxHandler(module);
+    return await handler(
+      signingClient,
+      senderAddress,
+      subcommand,
+      args,
+      waitForConfirmation
+    );
   } catch (error) {
     if (error instanceof ManifestMCPError) {
       // Re-throw with enriched context if not already present

@@ -1,9 +1,33 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
-import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
-import { parseAmount, buildTxResult, parseBigInt, validateArgsLength } from './utils.js';
+import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult } from '../types.js';
+import { throwUnsupportedSubcommand } from '../modules.js';
+import { parseAmount, buildTxResult, parseBigInt, validateArgsLength, extractFlag, requireArgs } from './utils.js';
 
 const { MsgVote, MsgDeposit, MsgVoteWeighted, VoteOption } = cosmos.gov.v1;
+
+/** 10^18 as BigInt for fixed-point math */
+const FIXED18_ONE = BigInt('1000000000000000000');
+
+/**
+ * Format a fixed-18 BigInt as a decimal string without precision loss.
+ * E.g., 500000000000000000n -> "0.5", 1000000000000000000n -> "1.0"
+ */
+function formatFixed18(value: bigint): string {
+  const isNegative = value < BigInt(0);
+  const absValue = isNegative ? -value : value;
+  const intPart = absValue / FIXED18_ONE;
+  const fracPart = absValue % FIXED18_ONE;
+
+  // Pad fraction to 18 digits, then trim trailing zeros
+  const fracStr = fracPart.toString().padStart(18, '0').replace(/0+$/, '');
+
+  const sign = isNegative ? '-' : '';
+  if (fracStr === '') {
+    return `${sign}${intPart}.0`;
+  }
+  return `${sign}${intPart}.${fracStr}`;
+}
 
 /**
  * Parse a decimal weight string to an 18-decimal fixed-point string.
@@ -70,30 +94,19 @@ export async function routeGovTransaction(
   senderAddress: string,
   subcommand: string,
   args: string[],
-  _config: ManifestMCPConfig,
   waitForConfirmation: boolean
 ): Promise<CosmosTxResult> {
   validateArgsLength(args, 'gov transaction');
 
   switch (subcommand) {
     case 'vote': {
-      if (args.length < 2) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          'vote requires proposal-id and option arguments'
-        );
-      }
-
+      requireArgs(args, 2, ['proposal-id', 'option'], 'gov vote');
       const [proposalIdStr, optionStr] = args;
       const proposalId = parseBigInt(proposalIdStr, 'proposal-id');
       const option = parseVoteOption(optionStr);
 
       // Extract optional metadata from args
-      let metadata = '';
-      const metadataIndex = args.indexOf('--metadata');
-      if (metadataIndex !== -1 && args[metadataIndex + 1]) {
-        metadata = args[metadataIndex + 1];
-      }
+      const { value: metadata = '' } = extractFlag(args, '--metadata', 'gov vote');
 
       const msg = {
         typeUrl: '/cosmos.gov.v1.MsgVote',
@@ -110,13 +123,7 @@ export async function routeGovTransaction(
     }
 
     case 'weighted-vote': {
-      if (args.length < 2) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          'weighted-vote requires proposal-id and options arguments (format: yes=0.5,no=0.5)'
-        );
-      }
-
+      requireArgs(args, 2, ['proposal-id', 'options'], 'gov weighted-vote');
       const [proposalIdStr, optionsStr] = args;
       const proposalId = parseBigInt(proposalIdStr, 'proposal-id');
 
@@ -138,11 +145,10 @@ export async function routeGovTransaction(
 
       // Validate that weights sum to exactly 1.0 (10^18 in fixed-point)
       const totalWeight = options.reduce((sum, opt) => sum + BigInt(opt.weight), BigInt(0));
-      const oneInFixed18 = BigInt('1000000000000000000'); // 10^18
-      if (totalWeight !== oneInFixed18) {
+      if (totalWeight !== FIXED18_ONE) {
         throw new ManifestMCPError(
           ManifestMCPErrorCode.TX_FAILED,
-          `Weighted vote options must sum to exactly 1.0. Got ${Number(totalWeight) / 1e18} (${options.map(o => o.weight).join(' + ')} = ${totalWeight})`
+          `Weighted vote options must sum to exactly 1.0. Got ${formatFixed18(totalWeight)} (${options.map(o => o.weight).join(' + ')} = ${totalWeight})`
         );
       }
 
@@ -161,13 +167,7 @@ export async function routeGovTransaction(
     }
 
     case 'deposit': {
-      if (args.length < 2) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.TX_FAILED,
-          'deposit requires proposal-id and amount arguments'
-        );
-      }
-
+      requireArgs(args, 2, ['proposal-id', 'amount'], 'gov deposit');
       const [proposalIdStr, amountStr] = args;
       const proposalId = parseBigInt(proposalIdStr, 'proposal-id');
       const { amount, denom } = parseAmount(amountStr);
@@ -186,10 +186,6 @@ export async function routeGovTransaction(
     }
 
     default:
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.UNSUPPORTED_TX,
-        `Unsupported gov transaction subcommand: ${subcommand}`,
-        { availableSubcommands: ['vote', 'weighted-vote', 'deposit'] }
-      );
+      throwUnsupportedSubcommand('tx', 'gov', subcommand);
   }
 }

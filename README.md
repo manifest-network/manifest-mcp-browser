@@ -275,7 +275,7 @@ All inputs are validated to prevent common attack vectors:
 Built-in protections against resource exhaustion:
 
 - **Rate limiting**: RPC requests throttled to 10/second by default (configurable)
-- **Pagination**: All list queries default to 100 items max
+- **Pagination**: All list queries default to 100 items (configurable via `--limit` flag, max 1000)
 - **Broadcast timeout**: Transactions timeout after 60 seconds
 - **Poll interval**: Transaction confirmation polled every 3 seconds
 

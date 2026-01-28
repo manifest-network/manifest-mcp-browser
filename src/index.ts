@@ -33,6 +33,20 @@ const SENSITIVE_FIELDS = new Set([
 ]);
 
 /**
+ * Parse raw args input into string array.
+ * Handles both array and space-separated string inputs.
+ */
+function parseArgs(rawArgs: unknown): string[] {
+  if (Array.isArray(rawArgs)) {
+    return rawArgs.map(String);
+  }
+  if (typeof rawArgs === 'string' && rawArgs.length > 0) {
+    return rawArgs.split(/\s+/);
+  }
+  return [];
+}
+
+/**
  * Recursively sanitize an object by redacting sensitive fields
  */
 function sanitizeForLogging(obj: unknown, depth = 0): unknown {
@@ -210,7 +224,7 @@ export class ManifestMCPServer {
     this.server = new Server(
       {
         name: '@manifest-network/manifest-mcp-browser',
-        version: '0.1.0',
+        version: '0.1.1',
       },
       {
         capabilities: {
@@ -297,17 +311,7 @@ export class ManifestMCPServer {
       case 'cosmos_query': {
         const module = toolInput.module as string;
         const subcommand = toolInput.subcommand as string;
-        const rawArgs = toolInput.args;
-
-        // Handle both array and string inputs for args
-        let args: string[];
-        if (Array.isArray(rawArgs)) {
-          args = rawArgs.map(String);
-        } else if (typeof rawArgs === 'string' && rawArgs.length > 0) {
-          args = rawArgs.split(/\s+/);
-        } else {
-          args = [];
-        }
+        const args = parseArgs(toolInput.args);
 
         if (!module || !subcommand) {
           throw new ManifestMCPError(
@@ -331,18 +335,8 @@ export class ManifestMCPServer {
       case 'cosmos_tx': {
         const module = toolInput.module as string;
         const subcommand = toolInput.subcommand as string;
-        const rawArgs = toolInput.args;
+        const args = parseArgs(toolInput.args);
         const waitForConfirmation = (toolInput.wait_for_confirmation as boolean) || false;
-
-        // Handle both array and string inputs for args
-        let args: string[];
-        if (Array.isArray(rawArgs)) {
-          args = rawArgs.map(String);
-        } else if (typeof rawArgs === 'string' && rawArgs.length > 0) {
-          args = rawArgs.split(/\s+/);
-        } else {
-          args = [];
-        }
 
         if (!module || !subcommand || args.length === 0) {
           throw new ManifestMCPError(

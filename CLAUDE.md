@@ -45,19 +45,23 @@ npm run test:watch  # Run tests in watch mode
 **queries/** - Module-specific query handlers
 - Each file exports `route{Module}Query()` function
 - Uses manifestjs RPC query client (`liftedinit.ClientFactory.createRPCQueryClient`)
-- Shared utilities in `utils.ts`: `parseBigInt()`, `parseInt()`, `defaultPagination`
-- All paginated queries use `DEFAULT_PAGE_LIMIT` (100) to prevent resource exhaustion
+- Shared utilities in `utils.ts`: `parseBigInt()`, `parseInteger()`, `createPagination()`, `extractPaginationArgs()`
+- All paginated queries support `--limit` flag (default: 100, max: 1000)
 
 **transactions/** - Module-specific transaction handlers
 - Each file exports `route{Module}Transaction()` function
 - Uses CosmJS `SigningStargateClient` with Manifest registries
 - Uses manifestjs enums (e.g., `VoteOption` from `cosmos.gov.v1`)
 - Shared utilities in `utils.ts`:
+  - `requireArgs()` - Validate required argument count with helpful error messages
   - `parseAmount()` - Parse amount strings with helpful error hints
   - `parseBigIntWithCode()` - Base implementation used by both queries and transactions
+  - `parseHexBytes()` - Parse and validate hex strings to Uint8Array (browser-compatible via `@cosmjs/encoding`)
+  - `bytesToHex()` - Convert Uint8Array to hex string (browser-compatible via `@cosmjs/encoding`)
   - `validateAddress()` - Bech32 validation using `@cosmjs/encoding`
   - `validateMemo()` - Enforce 256 char limit (Cosmos SDK default)
   - `validateArgsLength()` - Enforce 100 args max to prevent DoS
+  - `extractFlag()` - Extract `--flag value` pairs from args
   - `buildTxResult()` - Build transaction result objects
 
 **modules.ts** - Static registry of all supported modules and subcommands (no dynamic CLI discovery)
@@ -72,7 +76,7 @@ Transaction: bank, staking, distribution, gov, billing, manifest
 - `@manifest-network/manifestjs` - Protobuf types, registries, RPC client factory, and enums (e.g., `VoteOption`)
 - `@modelcontextprotocol/sdk` - MCP server implementation
 - `@cosmjs/stargate` - Signing client, gas price parsing
-- `@cosmjs/encoding` - Bech32 address validation (`fromBech32`)
+- `@cosmjs/encoding` - Bech32 address validation (`fromBech32`), hex conversion (`fromHex`, `toHex`)
 - `@cosmjs/proto-signing` - Wallet and signer interfaces
 
 ### Security Features

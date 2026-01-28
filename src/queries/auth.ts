@@ -1,32 +1,50 @@
 import { ManifestQueryClient } from '../client.js';
-import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
-import { defaultPagination } from './utils.js';
+import {
+  ManifestMCPErrorCode,
+  AuthAccountResult, AuthAccountsResult, AuthParamsResult, ModuleAccountsResult,
+  AddressBytesToStringResult, AddressStringToBytesResult, Bech32PrefixResult, AccountInfoResult
+} from '../types.js';
+import { requireArgs, extractPaginationArgs } from './utils.js';
+import { parseHexBytes, bytesToHex } from '../transactions/utils.js';
+import { throwUnsupportedSubcommand } from '../modules.js';
+
+/** Maximum address bytes length (256 bytes, more than enough for any address) */
+const MAX_ADDRESS_BYTES = 256;
+
+/** Auth query result union type */
+type AuthQueryResult =
+  | AuthAccountResult
+  | AuthAccountsResult
+  | AuthParamsResult
+  | ModuleAccountsResult
+  | AddressBytesToStringResult
+  | AddressStringToBytesResult
+  | Bech32PrefixResult
+  | AccountInfoResult;
 
 /**
  * Route auth query to manifestjs query client
+ *
+ * Paginated queries support --limit flag (default: 100, max: 1000)
  */
 export async function routeAuthQuery(
   queryClient: ManifestQueryClient,
   subcommand: string,
   args: string[]
-): Promise<Record<string, unknown>> {
+): Promise<AuthQueryResult> {
   const auth = queryClient.cosmos.auth.v1beta1;
 
   switch (subcommand) {
     case 'account': {
-      if (args.length < 1) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          'account requires address argument'
-        );
-      }
+      requireArgs(args, 1, ['address'], 'auth account');
       const [address] = args;
       const result = await auth.account({ address });
       return { account: result.account };
     }
 
     case 'accounts': {
-      const result = await auth.accounts({ pagination: defaultPagination });
+      const { pagination } = extractPaginationArgs(args, 'auth accounts');
+      const result = await auth.accounts({ pagination });
       return { accounts: result.accounts, pagination: result.pagination };
     }
 
@@ -41,60 +59,24 @@ export async function routeAuthQuery(
     }
 
     case 'module-account-by-name': {
-      if (args.length < 1) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          'module-account-by-name requires name argument'
-        );
-      }
+      requireArgs(args, 1, ['name'], 'auth module-account-by-name');
       const [name] = args;
       const result = await auth.moduleAccountByName({ name });
       return { account: result.account };
     }
 
     case 'address-bytes-to-string': {
-      if (args.length < 1) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          'address-bytes-to-string requires address-bytes argument'
-        );
-      }
-      const hexString = args[0];
-      // Validate hex format: must be valid hex characters with even length
-      if (!/^[0-9a-fA-F]*$/.test(hexString)) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          `Invalid hex string: "${hexString}". Must contain only hexadecimal characters (0-9, a-f, A-F)`
-        );
-      }
-      if (hexString.length % 2 !== 0) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          `Invalid hex string length: ${hexString.length}. Must have an even number of characters`
-        );
-      }
-      // Limit size to prevent DoS (256 bytes = 512 hex chars, more than enough for any address)
-      if (hexString.length > 512) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          `Hex string too long: ${hexString.length} characters. Maximum allowed: 512`
-        );
-      }
-      const addressBytes = new Uint8Array(Buffer.from(hexString, 'hex'));
+      requireArgs(args, 1, ['address-bytes'], 'auth address-bytes-to-string');
+      const addressBytes = parseHexBytes(args[0], 'address-bytes', MAX_ADDRESS_BYTES, ManifestMCPErrorCode.QUERY_FAILED);
       const result = await auth.addressBytesToString({ addressBytes });
       return { addressString: result.addressString };
     }
 
     case 'address-string-to-bytes': {
-      if (args.length < 1) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          'address-string-to-bytes requires address-string argument'
-        );
-      }
+      requireArgs(args, 1, ['address-string'], 'auth address-string-to-bytes');
       const [addressString] = args;
       const result = await auth.addressStringToBytes({ addressString });
-      return { addressBytes: Buffer.from(result.addressBytes).toString('hex') };
+      return { addressBytes: bytesToHex(result.addressBytes) };
     }
 
     case 'bech32-prefix': {
@@ -103,34 +85,13 @@ export async function routeAuthQuery(
     }
 
     case 'account-info': {
-      if (args.length < 1) {
-        throw new ManifestMCPError(
-          ManifestMCPErrorCode.QUERY_FAILED,
-          'account-info requires address argument'
-        );
-      }
+      requireArgs(args, 1, ['address'], 'auth account-info');
       const [address] = args;
       const result = await auth.accountInfo({ address });
       return { info: result.info };
     }
 
     default:
-      throw new ManifestMCPError(
-        ManifestMCPErrorCode.UNSUPPORTED_QUERY,
-        `Unsupported auth query subcommand: ${subcommand}`,
-        {
-          availableSubcommands: [
-            'account',
-            'accounts',
-            'params',
-            'module-accounts',
-            'module-account-by-name',
-            'address-bytes-to-string',
-            'address-string-to-bytes',
-            'bech32-prefix',
-            'account-info',
-          ],
-        }
-      );
+      throwUnsupportedSubcommand('query', 'auth', subcommand);
   }
 }

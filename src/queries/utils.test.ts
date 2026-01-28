@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { parseBigInt, parseInt } from './utils.js';
+import {
+  parseBigInt,
+  parseInteger,
+  createPagination,
+  extractPaginationArgs,
+  DEFAULT_PAGE_LIMIT,
+  MAX_PAGE_LIMIT,
+} from './utils.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
 
 describe('parseBigInt', () => {
@@ -38,24 +45,112 @@ describe('parseBigInt', () => {
   });
 });
 
-describe('parseInt', () => {
+describe('parseInteger', () => {
   it('should parse valid integer strings', () => {
-    expect(parseInt('0', 'status')).toBe(0);
-    expect(parseInt('123', 'status')).toBe(123);
-    expect(parseInt('-5', 'status')).toBe(-5);
+    expect(parseInteger('0', 'status')).toBe(0);
+    expect(parseInteger('123', 'status')).toBe(123);
+    expect(parseInteger('-5', 'status')).toBe(-5);
   });
 
   it('should throw ManifestMCPError for invalid integers', () => {
-    expect(() => parseInt('', 'status')).toThrow(ManifestMCPError);
-    expect(() => parseInt('abc', 'status')).toThrow(ManifestMCPError);
+    expect(() => parseInteger('', 'status')).toThrow(ManifestMCPError);
+    expect(() => parseInteger('abc', 'status')).toThrow(ManifestMCPError);
   });
 
   it('should have correct error code', () => {
     try {
-      parseInt('invalid', 'status');
+      parseInteger('invalid', 'status');
     } catch (error) {
       expect(error).toBeInstanceOf(ManifestMCPError);
       expect((error as ManifestMCPError).code).toBe(ManifestMCPErrorCode.QUERY_FAILED);
     }
+  });
+});
+
+describe('createPagination', () => {
+  it('should use default limit when none provided', () => {
+    const pagination = createPagination();
+    expect(pagination.limit).toBe(DEFAULT_PAGE_LIMIT);
+    expect(pagination.offset).toBe(BigInt(0));
+    expect(pagination.countTotal).toBe(false);
+    expect(pagination.reverse).toBe(false);
+    expect(pagination.key).toEqual(new Uint8Array());
+  });
+
+  it('should use provided limit', () => {
+    const pagination = createPagination(BigInt(50));
+    expect(pagination.limit).toBe(BigInt(50));
+  });
+
+  it('should clamp limit to minimum of 1', () => {
+    const pagination = createPagination(BigInt(0));
+    expect(pagination.limit).toBe(BigInt(1));
+
+    const paginationNegative = createPagination(BigInt(-10));
+    expect(paginationNegative.limit).toBe(BigInt(1));
+  });
+
+  it('should clamp limit to maximum', () => {
+    const pagination = createPagination(BigInt(9999));
+    expect(pagination.limit).toBe(MAX_PAGE_LIMIT);
+  });
+});
+
+describe('extractPaginationArgs', () => {
+  it('should return default pagination when no --limit flag', () => {
+    const { pagination, remainingArgs } = extractPaginationArgs(['arg1', 'arg2'], 'test');
+    expect(pagination.limit).toBe(DEFAULT_PAGE_LIMIT);
+    expect(remainingArgs).toEqual(['arg1', 'arg2']);
+  });
+
+  it('should extract --limit flag and value', () => {
+    const { pagination, remainingArgs } = extractPaginationArgs(
+      ['arg1', '--limit', '50', 'arg2'],
+      'test'
+    );
+    expect(pagination.limit).toBe(BigInt(50));
+    expect(remainingArgs).toEqual(['arg1', 'arg2']);
+  });
+
+  it('should handle --limit at end of args', () => {
+    const { pagination, remainingArgs } = extractPaginationArgs(
+      ['arg1', '--limit', '25'],
+      'test'
+    );
+    expect(pagination.limit).toBe(BigInt(25));
+    expect(remainingArgs).toEqual(['arg1']);
+  });
+
+  it('should handle --limit at start of args', () => {
+    const { pagination, remainingArgs } = extractPaginationArgs(
+      ['--limit', '75', 'arg1'],
+      'test'
+    );
+    expect(pagination.limit).toBe(BigInt(75));
+    expect(remainingArgs).toEqual(['arg1']);
+  });
+
+  it('should throw for invalid limit value', () => {
+    expect(() =>
+      extractPaginationArgs(['--limit', 'abc'], 'test')
+    ).toThrow(ManifestMCPError);
+  });
+
+  it('should throw for limit below minimum', () => {
+    expect(() =>
+      extractPaginationArgs(['--limit', '0'], 'test')
+    ).toThrow(ManifestMCPError);
+  });
+
+  it('should throw for limit above maximum', () => {
+    expect(() =>
+      extractPaginationArgs(['--limit', '9999'], 'test')
+    ).toThrow(ManifestMCPError);
+  });
+
+  it('should handle empty args array', () => {
+    const { pagination, remainingArgs } = extractPaginationArgs([], 'test');
+    expect(pagination.limit).toBe(DEFAULT_PAGE_LIMIT);
+    expect(remainingArgs).toEqual([]);
   });
 });
