@@ -47,10 +47,6 @@
   "overrides": {
     "@cosmjs/stargate": "npm:@manifest-network/stargate@0.32.4-ll.3"
   },
-  "peerDependencies": {
-    "@cosmjs/encoding": "0.32.4",
-    "@cosmjs/proto-signing": "0.32.4"
-  },
   "devDependencies": {
     "@types/node": "20.19.30",
     "typescript": "5.9.3",
