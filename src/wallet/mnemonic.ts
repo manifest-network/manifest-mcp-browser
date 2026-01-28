@@ -71,8 +71,10 @@ export class MnemonicWalletProvider implements WalletProvider {
         // Clear promise after successful init - wallet check will short-circuit future calls
         this.initPromise = null;
       } catch (error) {
-        // Clear promise on failure so retry is possible
+        // Clear state on failure so retry is possible
         this.initPromise = null;
+        this.wallet = null;
+        this.address = null;
         if (error instanceof ManifestMCPError) {
           throw error;
         }

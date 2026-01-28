@@ -151,17 +151,24 @@ export class CosmosClientManager {
 
     // Start initialization and cache the promise to prevent concurrent init
     this.queryClientPromise = (async () => {
+      // Capture reference to detect if superseded by disconnect/config change
+      const thisInitPromise = this.queryClientPromise;
       try {
         // Use liftedinit ClientFactory which includes cosmos + liftedinit modules
-        this.queryClient = await liftedinit.ClientFactory.createRPCQueryClient({
+        const client = await liftedinit.ClientFactory.createRPCQueryClient({
           rpcEndpoint: this.config.rpcUrl,
         });
-        // Clear promise after successful init - client check will short-circuit future calls
-        this.queryClientPromise = null;
-        return this.queryClient;
+        // Only store if this is still the active promise
+        if (this.queryClientPromise === thisInitPromise) {
+          this.queryClient = client;
+          this.queryClientPromise = null;
+        }
+        return client;
       } catch (error) {
-        // Clear promise on failure so retry is possible
-        this.queryClientPromise = null;
+        // Clear promise on failure so retry is possible (only if still active)
+        if (this.queryClientPromise === thisInitPromise) {
+          this.queryClientPromise = null;
+        }
         throw new ManifestMCPError(
           ManifestMCPErrorCode.RPC_CONNECTION_FAILED,
           `Failed to connect to RPC endpoint: ${error instanceof Error ? error.message : String(error)}`,
@@ -189,6 +196,8 @@ export class CosmosClientManager {
 
     // Start initialization and cache the promise to prevent concurrent init
     this.signingClientPromise = (async () => {
+      // Capture reference to detect if superseded by disconnect/config change
+      const thisInitPromise = this.signingClientPromise;
       try {
         const signer = await this.walletProvider.getSigner();
         const gasPrice = GasPrice.fromString(this.config.gasPrice);
@@ -203,7 +212,7 @@ export class CosmosClientManager {
         // Note: Registry type from @cosmjs/proto-signing doesn't perfectly match
         // SigningStargateClientOptions due to telescope-generated proto types.
         // This is a known limitation with custom cosmos-sdk module registries.
-        this.signingClient = await SigningStargateClient.connectWithSigner(
+        const client = await SigningStargateClient.connectWithSigner(
           endpoint,
           signer,
           {
@@ -214,12 +223,20 @@ export class CosmosClientManager {
             broadcastPollIntervalMs: DEFAULT_BROADCAST_POLL_INTERVAL_MS,
           }
         );
-        // Clear promise after successful init - client check will short-circuit future calls
-        this.signingClientPromise = null;
-        return this.signingClient;
+        // Only store if this is still the active promise
+        if (this.signingClientPromise === thisInitPromise) {
+          this.signingClient = client;
+          this.signingClientPromise = null;
+        } else {
+          // Promise was superseded, clean up the client we just created
+          client.disconnect();
+        }
+        return client;
       } catch (error) {
-        // Clear promise on failure so retry is possible
-        this.signingClientPromise = null;
+        // Clear promise on failure so retry is possible (only if still active)
+        if (this.signingClientPromise === thisInitPromise) {
+          this.signingClientPromise = null;
+        }
         if (error instanceof ManifestMCPError) {
           throw error;
         }
