@@ -116,7 +116,6 @@ export async function cosmosTx(
 
   const signingClient = await clientManager.getSigningClient();
   const senderAddress = await clientManager.getAddress();
-  const config = clientManager.getConfig();
 
   try {
     switch (module) {
@@ -126,7 +125,6 @@ export async function cosmosTx(
           senderAddress,
           subcommand,
           args,
-          config,
           waitForConfirmation
         );
       case 'staking':
@@ -135,7 +133,6 @@ export async function cosmosTx(
           senderAddress,
           subcommand,
           args,
-          config,
           waitForConfirmation
         );
       case 'distribution':
@@ -144,7 +141,6 @@ export async function cosmosTx(
           senderAddress,
           subcommand,
           args,
-          config,
           waitForConfirmation
         );
       case 'gov':
@@ -153,7 +149,6 @@ export async function cosmosTx(
           senderAddress,
           subcommand,
           args,
-          config,
           waitForConfirmation
         );
       case 'billing':
@@ -162,7 +157,6 @@ export async function cosmosTx(
           senderAddress,
           subcommand,
           args,
-          config,
           waitForConfirmation
         );
       case 'manifest':
@@ -171,7 +165,6 @@ export async function cosmosTx(
           senderAddress,
           subcommand,
           args,
-          config,
           waitForConfirmation
         );
       default:

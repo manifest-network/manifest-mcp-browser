@@ -1,7 +1,7 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { fromHex } from '@cosmjs/encoding';
 import { liftedinit } from '@manifest-network/manifestjs';
-import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
+import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult } from '../types.js';
 import { parseAmount, buildTxResult, parseBigInt, validateAddress, validateArgsLength, extractFlag, filterConsumedArgs, parseColonPair } from './utils.js';
 import { getSubcommandUsage, throwUnsupportedSubcommand } from '../modules.js';
 
@@ -50,7 +50,6 @@ export async function routeBillingTransaction(
   senderAddress: string,
   subcommand: string,
   args: string[],
-  _config: ManifestMCPConfig,
   waitForConfirmation: boolean
 ): Promise<CosmosTxResult> {
   validateArgsLength(args, 'billing transaction');
@@ -120,25 +119,28 @@ export async function routeBillingTransaction(
     }
 
     case 'close-lease': {
-      if (args.length < 1) {
+      // Parse optional --reason flag
+      const { value: reason, consumedIndices } = extractFlag(args, '--reason', 'billing close-lease');
+      const leaseArgs = filterConsumedArgs(args, consumedIndices);
+
+      if (leaseArgs.length < 1) {
         const usage = getSubcommandUsage('tx', 'billing', 'close-lease');
         throw new ManifestMCPError(
           ManifestMCPErrorCode.TX_FAILED,
-          `close-lease requires at least one lease-uuid argument. Usage: close-lease ${usage || '<lease-uuid>...'}`,
+          `close-lease requires at least one lease-uuid argument. Usage: close-lease ${usage || '[--reason <reason>] <lease-uuid>...'}`,
           { usage }
         );
       }
 
       // MsgCloseLease can close multiple leases at once
-      const leaseUuids = args;
-      const reason = ''; // Optional reason, could be added as a flag later
+      const leaseUuids = leaseArgs;
 
       const msg = {
         typeUrl: '/liftedinit.billing.v1.MsgCloseLease',
         value: MsgCloseLease.fromPartial({
           sender: senderAddress,
           leaseUuids,
-          reason,
+          reason: reason ?? '',
         }),
       };
 

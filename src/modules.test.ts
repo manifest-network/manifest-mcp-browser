@@ -4,6 +4,7 @@ import {
   getModuleSubcommands,
   isSubcommandSupported,
   getSupportedModules,
+  throwUnsupportedSubcommand,
 } from './modules.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from './types.js';
 
@@ -123,5 +124,64 @@ describe('getSupportedModules', () => {
 
     expect(Array.isArray(modules.tx.bank)).toBe(true);
     expect(modules.tx.bank).toContain('send');
+  });
+});
+
+describe('throwUnsupportedSubcommand', () => {
+  it('should throw ManifestMCPError for unsupported query subcommand', () => {
+    expect(() => throwUnsupportedSubcommand('query', 'bank', 'unknown')).toThrow(ManifestMCPError);
+  });
+
+  it('should throw ManifestMCPError for unsupported tx subcommand', () => {
+    expect(() => throwUnsupportedSubcommand('tx', 'bank', 'unknown')).toThrow(ManifestMCPError);
+  });
+
+  it('should use UNSUPPORTED_QUERY error code for queries', () => {
+    try {
+      throwUnsupportedSubcommand('query', 'bank', 'unknown');
+    } catch (error) {
+      expect((error as ManifestMCPError).code).toBe(ManifestMCPErrorCode.UNSUPPORTED_QUERY);
+    }
+  });
+
+  it('should use UNSUPPORTED_TX error code for transactions', () => {
+    try {
+      throwUnsupportedSubcommand('tx', 'bank', 'unknown');
+    } catch (error) {
+      expect((error as ManifestMCPError).code).toBe(ManifestMCPErrorCode.UNSUPPORTED_TX);
+    }
+  });
+
+  it('should include module and subcommand in error message', () => {
+    try {
+      throwUnsupportedSubcommand('query', 'staking', 'badcmd');
+    } catch (error) {
+      const message = (error as ManifestMCPError).message;
+      expect(message).toContain('staking');
+      expect(message).toContain('badcmd');
+      expect(message).toContain('query');
+    }
+  });
+
+  it('should include availableSubcommands in error details', () => {
+    try {
+      throwUnsupportedSubcommand('tx', 'bank', 'unknown');
+    } catch (error) {
+      const details = (error as ManifestMCPError).details;
+      expect(details?.availableSubcommands).toBeDefined();
+      expect(details?.availableSubcommands).toContain('send');
+      expect(details?.availableSubcommands).toContain('multi-send');
+    }
+  });
+
+  it('should include correct subcommands for each module', () => {
+    try {
+      throwUnsupportedSubcommand('query', 'gov', 'unknown');
+    } catch (error) {
+      const details = (error as ManifestMCPError).details;
+      expect(details?.availableSubcommands).toContain('proposal');
+      expect(details?.availableSubcommands).toContain('proposals');
+      expect(details?.availableSubcommands).toContain('vote');
+    }
   });
 });

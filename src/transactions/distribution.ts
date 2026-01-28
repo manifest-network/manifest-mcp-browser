@@ -1,6 +1,6 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { cosmos } from '@manifest-network/manifestjs';
-import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult, ManifestMCPConfig } from '../types.js';
+import { ManifestMCPError, ManifestMCPErrorCode, CosmosTxResult } from '../types.js';
 import { throwUnsupportedSubcommand } from '../modules.js';
 import { parseAmount, buildTxResult, validateAddress, validateArgsLength } from './utils.js';
 
@@ -14,7 +14,6 @@ export async function routeDistributionTransaction(
   senderAddress: string,
   subcommand: string,
   args: string[],
-  _config: ManifestMCPConfig,
   waitForConfirmation: boolean
 ): Promise<CosmosTxResult> {
   validateArgsLength(args, 'distribution transaction');
