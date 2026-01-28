@@ -16,7 +16,8 @@
     "dev": "tsc --watch",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "version": "node -e \"require('fs').writeFileSync('src/version.ts','export const VERSION = '+JSON.stringify(require('./package.json').version)+';\\n')\" && git add src/version.ts"
   },
   "keywords": [
     "mcp",
