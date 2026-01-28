@@ -119,7 +119,7 @@ The server exposes the same five tools as `manifest-mcp`:
 | staking | delegate, unbond (alias: undelegate), redelegate |
 | distribution | withdraw-rewards, set-withdraw-addr, fund-community-pool |
 | gov | vote, weighted-vote, deposit |
-| billing | fund-credit, create-lease, close-lease, withdraw |
+| billing | fund-credit, create-lease, close-lease, withdraw, create-lease-for-tenant, acknowledge-lease, reject-lease, cancel-lease, update-params |
 | manifest | payout, burn-held-balance |
 | sku | create-provider, update-provider, deactivate-provider, create-sku, update-sku, deactivate-sku, update-params |
 | group | create-group, update-group-members, update-group-admin, update-group-metadata, create-group-policy, update-group-policy-admin, create-group-with-policy, update-group-policy-decision-policy, update-group-policy-metadata, submit-proposal, withdraw-proposal, vote, exec, leave-group |
