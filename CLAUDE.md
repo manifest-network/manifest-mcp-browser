@@ -110,4 +110,20 @@ All errors use `ManifestMCPError` class with typed `ManifestMCPErrorCode` enum (
 
 ### Type Exports
 
-`ManifestQueryClient` type in `client.ts` is derived from manifestjs `liftedinit.ClientFactory.createRPCQueryClient` return type.
+**Client Types:**
+- `ManifestQueryClient` - Derived from manifestjs `liftedinit.ClientFactory.createRPCQueryClient` return type
+
+**Protobuf Types** (re-exported from `@manifest-network/manifestjs` via `types.ts`):
+- **Bank**: `BankParams`, `BankMetadata`, `SendEnabled`
+- **Staking**: `Validator`, `DelegationResponse`, `UnbondingDelegation`, `RedelegationResponse`, `StakingPool`, `StakingParams`, `HistoricalInfo`
+- **Distribution**: `DistributionParams`, `ValidatorAccumulatedCommission`, `ValidatorOutstandingRewards`, `ValidatorSlashEvent`, `DelegationDelegatorReward`
+- **Gov**: `GovProposal`, `GovVote`, `GovDeposit`, `GovTallyResult`, `GovParams`, `VotingParams`, `DepositParams`, `TallyParams`
+- **Auth**: `BaseAccount`, `ModuleAccount`, `AuthParams`, `Any` (for polymorphic accounts)
+- **Group**: `GroupInfo`, `GroupPolicyInfo`, `GroupMember`, `GroupProposal`, `GroupVote`, `GroupTallyResult`
+- **Billing**: `Lease`, `CreditAccount`, `BillingParams`, `QueryCreditEstimateResponse`
+- **SKU**: `Provider`, `SKU`, `SkuParams`
+
+Consumers can import these types directly:
+```typescript
+import { Validator, Lease, GovProposal } from '@manifest-network/manifest-mcp-browser';
+```

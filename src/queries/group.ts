@@ -3,13 +3,13 @@ import {
   GroupInfoResult, GroupPolicyInfoResult, GroupMembersResult,
   GroupsResult, GroupPoliciesResult, GroupProposalResult,
   GroupProposalsResult, GroupVoteResult, GroupVotesResult,
-  GroupTallyResult
+  GroupTallyQueryResult
 } from '../types.js';
 import { parseBigInt, requireArgs, extractPaginationArgs, validateAddress } from './utils.js';
 import { throwUnsupportedSubcommand } from '../modules.js';
 
 /** Group query result union type */
-type GroupQueryResult =
+type GroupQueryResultUnion =
   | GroupInfoResult
   | GroupPolicyInfoResult
   | GroupMembersResult
@@ -19,7 +19,7 @@ type GroupQueryResult =
   | GroupProposalsResult
   | GroupVoteResult
   | GroupVotesResult
-  | GroupTallyResult;
+  | GroupTallyQueryResult;
 
 /**
  * Route group module query to manifestjs query client
@@ -30,7 +30,7 @@ export async function routeGroupQuery(
   queryClient: ManifestQueryClient,
   subcommand: string,
   args: string[]
-): Promise<GroupQueryResult> {
+): Promise<GroupQueryResultUnion> {
   const group = queryClient.cosmos.group.v1;
 
   switch (subcommand) {
