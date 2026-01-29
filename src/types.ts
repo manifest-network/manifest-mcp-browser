@@ -316,12 +316,12 @@ export interface Coin {
 }
 
 /**
- * DecCoin type from Cosmos SDK (for rewards, etc.)
+ * DecCoin type from Cosmos SDK (for rewards, commission, etc.)
+ *
+ * DecCoin has the same structure as Coin but represents decimal amounts
+ * used in distribution calculations. The amount string may contain decimals.
  */
-export interface DecCoin {
-  readonly denom: string;
-  readonly amount: string;
-}
+export type DecCoin = Coin;
 
 // Bank query results
 export interface BalanceResult {
