@@ -15,6 +15,7 @@ import { AminoTypes } from '@cosmjs/stargate';
 import { RateLimiter } from 'limiter';
 import { ManifestMCPConfig, WalletProvider, ManifestMCPError, ManifestMCPErrorCode } from './types.js';
 import { DEFAULT_REQUESTS_PER_SECOND } from './config.js';
+import { withRetry } from './retry.js';
 
 // Type for the RPC query client from manifestjs liftedinit bundle
 // This includes cosmos modules + liftedinit-specific modules (billing, manifest, sku)
@@ -141,6 +142,8 @@ export class CosmosClientManager {
 
   /**
    * Get the manifestjs RPC query client with all module extensions
+   *
+   * Automatically retries on transient connection failures with exponential backoff.
    */
   async getQueryClient(): Promise<ManifestQueryClient> {
     // Return cached client if available
@@ -159,9 +162,16 @@ export class CosmosClientManager {
       const thisInitPromise = this.queryClientPromise;
       try {
         // Use liftedinit ClientFactory which includes cosmos + liftedinit modules
-        const client = await liftedinit.ClientFactory.createRPCQueryClient({
-          rpcEndpoint: this.config.rpcUrl,
-        });
+        // Wrap with retry for transient connection failures
+        const client = await withRetry(
+          () => liftedinit.ClientFactory.createRPCQueryClient({
+            rpcEndpoint: this.config.rpcUrl,
+          }),
+          {
+            config: this.config.retry,
+            operationName: 'connect query client',
+          }
+        );
         // Only store if this is still the active promise
         if (this.queryClientPromise === thisInitPromise) {
           this.queryClient = client;
@@ -172,6 +182,9 @@ export class CosmosClientManager {
         // Clear promise on failure so retry is possible (only if still active)
         if (this.queryClientPromise === thisInitPromise) {
           this.queryClientPromise = null;
+        }
+        if (error instanceof ManifestMCPError) {
+          throw error;
         }
         throw new ManifestMCPError(
           ManifestMCPErrorCode.RPC_CONNECTION_FAILED,
@@ -186,6 +199,8 @@ export class CosmosClientManager {
 
   /**
    * Get a signing client with all Manifest registries (for transactions)
+   *
+   * Automatically retries on transient connection failures with exponential backoff.
    */
   async getSigningClient(): Promise<SigningStargateClient> {
     // Return cached client if available
@@ -216,15 +231,22 @@ export class CosmosClientManager {
         // Note: Registry type from @cosmjs/proto-signing doesn't perfectly match
         // SigningStargateClientOptions due to telescope-generated proto types.
         // This is a known limitation with custom cosmos-sdk module registries.
-        const client = await SigningStargateClient.connectWithSigner(
-          endpoint,
-          signer,
+        // Wrap with retry for transient connection failures
+        const client = await withRetry(
+          () => SigningStargateClient.connectWithSigner(
+            endpoint,
+            signer,
+            {
+              registry: registry as Parameters<typeof SigningStargateClient.connectWithSigner>[2] extends { registry?: infer R } ? R : never,
+              aminoTypes,
+              gasPrice,
+              broadcastTimeoutMs: DEFAULT_BROADCAST_TIMEOUT_MS,
+              broadcastPollIntervalMs: DEFAULT_BROADCAST_POLL_INTERVAL_MS,
+            }
+          ),
           {
-            registry: registry as Parameters<typeof SigningStargateClient.connectWithSigner>[2] extends { registry?: infer R } ? R : never,
-            aminoTypes,
-            gasPrice,
-            broadcastTimeoutMs: DEFAULT_BROADCAST_TIMEOUT_MS,
-            broadcastPollIntervalMs: DEFAULT_BROADCAST_POLL_INTERVAL_MS,
+            config: this.config.retry,
+            operationName: 'connect signing client',
           }
         );
         // Only store if this is still the active promise

@@ -87,11 +87,12 @@ function sanitizeForLogging(obj: unknown, depth = 0): unknown {
 
 // Re-export types and utilities
 export * from './types.js';
-export { createConfig, createValidatedConfig, validateConfig } from './config.js';
+export { createConfig, createValidatedConfig, validateConfig, DEFAULT_RETRY_CONFIG } from './config.js';
 export { CosmosClientManager } from './client.js';
 export { cosmosQuery, cosmosTx } from './cosmos.js';
 export { getAvailableModules, getModuleSubcommands, getSubcommandUsage, getSupportedModules, isSubcommandSupported } from './modules.js';
 export { MnemonicWalletProvider } from './wallet/index.js';
+export { withRetry, isRetryableError, calculateBackoff } from './retry.js';
 
 /**
  * Tool definitions for the MCP server

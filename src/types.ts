@@ -129,6 +129,18 @@ export interface RateLimitConfig {
 }
 
 /**
+ * Retry configuration for transient RPC failures
+ */
+export interface RetryConfig {
+  /** Maximum number of retry attempts (default: 3) */
+  readonly maxRetries?: number;
+  /** Base delay in milliseconds before first retry (default: 1000) */
+  readonly baseDelayMs?: number;
+  /** Maximum delay in milliseconds between retries (default: 10000) */
+  readonly maxDelayMs?: number;
+}
+
+/**
  * Configuration for the Manifest MCP Browser server
  */
 export interface ManifestMCPConfig {
@@ -142,6 +154,8 @@ export interface ManifestMCPConfig {
   readonly addressPrefix?: string;
   /** Rate limiting configuration */
   readonly rateLimit?: RateLimitConfig;
+  /** Retry configuration for transient failures */
+  readonly retry?: RetryConfig;
 }
 
 /**

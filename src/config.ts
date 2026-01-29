@@ -1,4 +1,5 @@
 import { ManifestMCPConfig, ManifestMCPError, ManifestMCPErrorCode } from './types.js';
+import { DEFAULT_RETRY_CONFIG } from './retry.js';
 
 /**
  * Default address prefix for Manifest Network
@@ -9,6 +10,9 @@ const DEFAULT_ADDRESS_PREFIX = 'manifest';
  * Default requests per second for rate limiting
  */
 export const DEFAULT_REQUESTS_PER_SECOND = 10;
+
+// Re-export for consumers
+export { DEFAULT_RETRY_CONFIG };
 
 /**
  * Check if a hostname is localhost (IPv4, IPv6, or hostname)
@@ -77,6 +81,11 @@ export function createConfig(input: ManifestMCPConfig): ManifestMCPConfig {
     rateLimit: {
       requestsPerSecond: input.rateLimit?.requestsPerSecond ?? DEFAULT_REQUESTS_PER_SECOND,
     },
+    retry: {
+      maxRetries: input.retry?.maxRetries ?? DEFAULT_RETRY_CONFIG.maxRetries,
+      baseDelayMs: input.retry?.baseDelayMs ?? DEFAULT_RETRY_CONFIG.baseDelayMs,
+      maxDelayMs: input.retry?.maxDelayMs ?? DEFAULT_RETRY_CONFIG.maxDelayMs,
+    },
   };
 }
 
@@ -133,6 +142,48 @@ export function validateConfig(config: Partial<ManifestMCPConfig>): ValidationRe
         !Number.isInteger(config.rateLimit.requestsPerSecond)
       ) {
         errors.push('rateLimit.requestsPerSecond must be a positive integer');
+      }
+    }
+  }
+
+  if (config.retry !== undefined) {
+    if (typeof config.retry !== 'object' || config.retry === null || Array.isArray(config.retry)) {
+      errors.push('retry must be a plain object');
+    } else {
+      if (config.retry.maxRetries !== undefined) {
+        if (
+          typeof config.retry.maxRetries !== 'number' ||
+          config.retry.maxRetries < 0 ||
+          !Number.isInteger(config.retry.maxRetries)
+        ) {
+          errors.push('retry.maxRetries must be a non-negative integer');
+        }
+      }
+      if (config.retry.baseDelayMs !== undefined) {
+        if (
+          typeof config.retry.baseDelayMs !== 'number' ||
+          config.retry.baseDelayMs <= 0 ||
+          !Number.isInteger(config.retry.baseDelayMs)
+        ) {
+          errors.push('retry.baseDelayMs must be a positive integer');
+        }
+      }
+      if (config.retry.maxDelayMs !== undefined) {
+        if (
+          typeof config.retry.maxDelayMs !== 'number' ||
+          config.retry.maxDelayMs <= 0 ||
+          !Number.isInteger(config.retry.maxDelayMs)
+        ) {
+          errors.push('retry.maxDelayMs must be a positive integer');
+        }
+      }
+      // Validate maxDelayMs >= baseDelayMs if both are provided
+      if (
+        config.retry.baseDelayMs !== undefined &&
+        config.retry.maxDelayMs !== undefined &&
+        config.retry.maxDelayMs < config.retry.baseDelayMs
+      ) {
+        errors.push('retry.maxDelayMs must be greater than or equal to retry.baseDelayMs');
       }
     }
   }
