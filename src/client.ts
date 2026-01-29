@@ -21,6 +21,15 @@ import { withRetry } from './retry.js';
 // This includes cosmos modules + liftedinit-specific modules (billing, manifest, sku)
 export type ManifestQueryClient = Awaited<ReturnType<typeof liftedinit.ClientFactory.createRPCQueryClient>>;
 
+/**
+ * Extract the registry type expected by SigningStargateClient.connectWithSigner.
+ *
+ * The Registry type from @cosmjs/proto-signing doesn't perfectly match the registry type
+ * in SigningStargateClientOptions due to telescope-generated proto types. This type alias
+ * extracts the expected registry type from the function signature to enable type-safe casting.
+ */
+type SigningClientRegistry = Parameters<typeof SigningStargateClient.connectWithSigner>[2] extends { registry?: infer R } ? R : never;
+
 /** Default timeout for transaction broadcast (60 seconds) */
 const DEFAULT_BROADCAST_TIMEOUT_MS = 60_000;
 
@@ -237,7 +246,7 @@ export class CosmosClientManager {
             endpoint,
             signer,
             {
-              registry: registry as Parameters<typeof SigningStargateClient.connectWithSigner>[2] extends { registry?: infer R } ? R : never,
+              registry: registry as SigningClientRegistry,
               aminoTypes,
               gasPrice,
               broadcastTimeoutMs: DEFAULT_BROADCAST_TIMEOUT_MS,
