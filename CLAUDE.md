@@ -14,6 +14,7 @@ npm run dev         # Watch mode for TypeScript
 npm run lint        # Type-check without emitting (tsc --noEmit)
 npm test            # Run tests with vitest
 npm run test:watch  # Run tests in watch mode
+npm run docs        # Generate API documentation with TypeDoc
 ```
 
 ## Architecture

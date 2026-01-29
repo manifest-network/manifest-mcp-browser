@@ -18,7 +18,18 @@ npm run dev         # Watch mode for TypeScript
 npm run lint        # Type-check without emitting
 npm test            # Run tests
 npm run test:watch  # Run tests in watch mode
+npm run docs        # Generate API documentation
 ```
+
+## API Documentation
+
+Generate API reference documentation locally:
+
+```bash
+npm run docs
+```
+
+Documentation will be generated in the `docs/` directory. Open `docs/index.html` in a browser to view.
 
 ## Quick Start
 

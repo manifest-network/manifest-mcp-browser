@@ -1,0 +1,20 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["./src/index.ts"],
+  "out": "./docs",
+  "name": "@manifest-network/manifest-mcp-browser",
+  "readme": "./README.md",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "treatWarningsAsErrors": false,
+  "validation": {
+    "notExported": false,
+    "invalidLink": true,
+    "notDocumented": false
+  },
+  "navigationLinks": {
+    "GitHub": "https://github.com/manifest-network/manifest-mcp-browser"
+  }
+}
