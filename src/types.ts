@@ -1,5 +1,125 @@
 import type { OfflineSigner } from '@cosmjs/proto-signing';
 
+// Bank module types
+import type {
+  Params as BankParams,
+  Metadata as BankMetadata,
+  SendEnabled,
+} from '@manifest-network/manifestjs/dist/codegen/cosmos/bank/v1beta1/bank';
+
+// Staking module types
+import type {
+  Validator,
+  DelegationResponse,
+  UnbondingDelegation,
+  RedelegationResponse,
+  Pool as StakingPool,
+  Params as StakingParams,
+  HistoricalInfo,
+} from '@manifest-network/manifestjs/dist/codegen/cosmos/staking/v1beta1/staking';
+
+// Distribution module types
+import type {
+  Params as DistributionParams,
+  ValidatorAccumulatedCommission,
+  ValidatorOutstandingRewards,
+  ValidatorSlashEvent,
+  DelegationDelegatorReward,
+} from '@manifest-network/manifestjs/dist/codegen/cosmos/distribution/v1beta1/distribution';
+
+// Gov module types (v1 for newer chains)
+import type {
+  Proposal as GovProposal,
+  Vote as GovVote,
+  Deposit as GovDeposit,
+  TallyResult as GovTallyResult,
+  Params as GovParams,
+  VotingParams,
+  DepositParams,
+  TallyParams,
+} from '@manifest-network/manifestjs/dist/codegen/cosmos/gov/v1/gov';
+
+// Protobuf Any type for polymorphic account types
+import type { Any } from '@manifest-network/manifestjs/dist/codegen/google/protobuf/any';
+
+// Billing credit estimate response
+import type { QueryCreditEstimateResponse } from '@manifest-network/manifestjs/dist/codegen/liftedinit/billing/v1/query';
+
+// Auth module types
+import type {
+  BaseAccount,
+  ModuleAccount,
+  Params as AuthParams,
+} from '@manifest-network/manifestjs/dist/codegen/cosmos/auth/v1beta1/auth';
+
+// Group module types
+import type {
+  GroupInfo,
+  GroupPolicyInfo,
+  GroupMember,
+  Proposal as GroupProposal,
+  Vote as GroupVote,
+  TallyResult as GroupTallyResult,
+} from '@manifest-network/manifestjs/dist/codegen/cosmos/group/v1/types';
+
+// Billing module types (Manifest-specific)
+import type {
+  Lease,
+  CreditAccount,
+  Params as BillingParams,
+} from '@manifest-network/manifestjs/dist/codegen/liftedinit/billing/v1/types';
+
+// SKU module types (Manifest-specific)
+import type {
+  Provider,
+  SKU,
+  Params as SkuParams,
+} from '@manifest-network/manifestjs/dist/codegen/liftedinit/sku/v1/types';
+
+// Re-export commonly used protobuf types for consumers
+export type {
+  BankParams,
+  BankMetadata,
+  SendEnabled,
+  Validator,
+  DelegationResponse,
+  UnbondingDelegation,
+  RedelegationResponse,
+  StakingPool,
+  StakingParams,
+  HistoricalInfo,
+  DistributionParams,
+  ValidatorAccumulatedCommission,
+  ValidatorOutstandingRewards,
+  ValidatorSlashEvent,
+  DelegationDelegatorReward,
+  GovProposal,
+  GovVote,
+  GovDeposit,
+  GovTallyResult,
+  GovParams,
+  VotingParams,
+  DepositParams,
+  TallyParams,
+  BaseAccount,
+  ModuleAccount,
+  AuthParams,
+  Any,
+  GroupInfo,
+  GroupPolicyInfo,
+  GroupMember,
+  GroupProposal,
+  GroupVote,
+  GroupTallyResult,
+  Lease,
+  CreditAccount,
+  BillingParams,
+  QueryCreditEstimateResponse,
+  Provider,
+  SKU,
+  SkuParams,
+};
+
 /**
  * Rate limiting configuration
  */
@@ -207,70 +327,72 @@ export interface SupplyOfResult {
 }
 
 export interface DenomMetadataResult {
-  readonly metadata?: unknown;
+  readonly metadata?: BankMetadata;
 }
 
 export interface DenomsMetadataResult extends PaginatedResult {
-  readonly metadatas: readonly unknown[];
+  readonly metadatas: readonly BankMetadata[];
 }
 
 export interface SendEnabledResult extends PaginatedResult {
-  readonly sendEnabled: readonly unknown[];
+  readonly sendEnabled: readonly SendEnabled[];
 }
 
 export interface BankParamsResult {
-  readonly params?: unknown;
+  readonly params?: BankParams;
 }
 
 // Staking query results
 export interface DelegationResult {
-  readonly delegationResponse?: unknown;
+  readonly delegationResponse?: DelegationResponse;
 }
 
 export interface DelegationsResult extends PaginatedResult {
-  readonly delegationResponses: readonly unknown[];
+  readonly delegationResponses: readonly DelegationResponse[];
 }
 
 export interface UnbondingDelegationResult {
-  readonly unbond?: unknown;
+  readonly unbond?: UnbondingDelegation;
 }
 
 export interface UnbondingDelegationsResult extends PaginatedResult {
-  readonly unbondingResponses: readonly unknown[];
+  readonly unbondingResponses: readonly UnbondingDelegation[];
 }
 
 export interface RedelegationsResult extends PaginatedResult {
-  readonly redelegationResponses: readonly unknown[];
+  readonly redelegationResponses: readonly RedelegationResponse[];
 }
 
 export interface ValidatorResult {
-  readonly validator?: unknown;
+  readonly validator?: Validator;
 }
 
 export interface ValidatorsResult extends PaginatedResult {
-  readonly validators: readonly unknown[];
+  readonly validators: readonly Validator[];
 }
 
 export interface StakingPoolResult {
-  readonly pool?: unknown;
+  readonly pool?: StakingPool;
 }
 
 export interface StakingParamsResult {
-  readonly params?: unknown;
+  readonly params?: StakingParams;
 }
 
 export interface HistoricalInfoResult {
-  readonly hist?: unknown;
+  readonly hist?: HistoricalInfo;
 }
 
 // Distribution query results
+// Note: When querying all rewards, 'rewards' is DelegationDelegatorReward[] (per validator).
+// When querying specific validator, 'rewards' is DecCoin[] (direct reward coins).
 export interface RewardsResult {
-  readonly rewards: readonly DecCoin[];
+  readonly rewards: readonly DecCoin[] | readonly DelegationDelegatorReward[];
   readonly total?: readonly DecCoin[];
 }
 
 export interface CommissionResult {
-  readonly commission?: unknown;
+  readonly commission?: ValidatorAccumulatedCommission;
 }
 
 export interface CommunityPoolResult {
@@ -278,15 +400,15 @@ export interface CommunityPoolResult {
 }
 
 export interface DistributionParamsResult {
-  readonly params?: unknown;
+  readonly params?: DistributionParams;
 }
 
 export interface ValidatorOutstandingRewardsResult {
-  readonly rewards?: unknown;
+  readonly rewards?: ValidatorOutstandingRewards;
 }
 
 export interface SlashesResult extends PaginatedResult {
-  readonly slashes: readonly unknown[];
+  readonly slashes: readonly ValidatorSlashEvent[];
 }
 
 export interface DelegatorValidatorsResult {
@@ -299,55 +421,56 @@ export interface DelegatorWithdrawAddressResult {
 
 // Gov query results
 export interface ProposalResult {
-  readonly proposal?: unknown;
+  readonly proposal?: GovProposal;
 }
 
 export interface ProposalsResult extends PaginatedResult {
-  readonly proposals: readonly unknown[];
+  readonly proposals: readonly GovProposal[];
 }
 
 export interface VoteResult {
-  readonly vote?: unknown;
+  readonly vote?: GovVote;
 }
 
 export interface VotesResult extends PaginatedResult {
-  readonly votes: readonly unknown[];
+  readonly votes: readonly GovVote[];
 }
 
 export interface DepositResult {
-  readonly deposit?: unknown;
+  readonly deposit?: GovDeposit;
 }
 
 export interface DepositsResult extends PaginatedResult {
-  readonly deposits: readonly unknown[];
+  readonly deposits: readonly GovDeposit[];
 }
 
 export interface TallyResult {
-  readonly tally?: unknown;
+  readonly tally?: GovTallyResult;
 }
 
 export interface GovParamsResult {
-  readonly votingParams?: unknown;
-  readonly depositParams?: unknown;
-  readonly tallyParams?: unknown;
-  readonly params?: unknown;
+  readonly votingParams?: VotingParams;
+  readonly depositParams?: DepositParams;
+  readonly tallyParams?: TallyParams;
+  readonly params?: GovParams;
 }
 
 // Auth query results
+// Note: Account types are polymorphic - the RPC can return BaseAccount, ModuleAccount, or other account types wrapped in Any
 export interface AuthAccountResult {
-  readonly account?: unknown;
+  readonly account?: BaseAccount | ModuleAccount | Any;
 }
 
 export interface AuthAccountsResult extends PaginatedResult {
-  readonly accounts: readonly unknown[];
+  readonly accounts: readonly (BaseAccount | Any)[];
 }
 
 export interface AuthParamsResult {
-  readonly params?: unknown;
+  readonly params?: AuthParams;
 }
 
 export interface ModuleAccountsResult {
-  readonly accounts: readonly unknown[];
+  readonly accounts: readonly (ModuleAccount | Any)[];
 }
 
 export interface AddressBytesToStringResult {
@@ -363,28 +486,28 @@ export interface Bech32PrefixResult {
 }
 
 export interface AccountInfoResult {
-  readonly info?: unknown;
+  readonly info?: BaseAccount;
 }
 
 // Billing query results
 export interface BillingParamsResult {
-  readonly params?: unknown;
+  readonly params?: BillingParams;
 }
 
 export interface LeaseResult {
-  readonly lease?: unknown;
+  readonly lease?: Lease;
 }
 
 export interface LeasesResult extends PaginatedResult {
-  readonly leases: readonly unknown[];
+  readonly leases: readonly Lease[];
 }
 
 export interface CreditAccountResult {
-  readonly creditAccount?: unknown;
+  readonly creditAccount?: CreditAccount;
 }
 
 export interface CreditAccountsResult extends PaginatedResult {
-  readonly creditAccounts: readonly unknown[];
+  readonly creditAccounts: readonly CreditAccount[];
 }
 
 export interface CreditAddressResult {
@@ -400,69 +523,69 @@ export interface ProviderWithdrawableResult {
 }
 
 export interface CreditEstimateResult {
-  readonly estimate: unknown;
+  readonly estimate: QueryCreditEstimateResponse;
 }
 
 // Group query results
 export interface GroupInfoResult {
-  readonly info?: unknown;
+  readonly info?: GroupInfo;
 }
 
 export interface GroupPolicyInfoResult {
-  readonly info?: unknown;
+  readonly info?: GroupPolicyInfo;
 }
 
 export interface GroupMembersResult extends PaginatedResult {
-  readonly members: readonly unknown[];
+  readonly members: readonly GroupMember[];
 }
 
 export interface GroupsResult extends PaginatedResult {
-  readonly groups: readonly unknown[];
+  readonly groups: readonly GroupInfo[];
 }
 
 export interface GroupPoliciesResult extends PaginatedResult {
-  readonly groupPolicies: readonly unknown[];
+  readonly groupPolicies: readonly GroupPolicyInfo[];
 }
 
 export interface GroupProposalResult {
-  readonly proposal?: unknown;
+  readonly proposal?: GroupProposal;
 }
 
 export interface GroupProposalsResult extends PaginatedResult {
-  readonly proposals: readonly unknown[];
+  readonly proposals: readonly GroupProposal[];
 }
 
 export interface GroupVoteResult {
-  readonly vote?: unknown;
+  readonly vote?: GroupVote;
 }
 
 export interface GroupVotesResult extends PaginatedResult {
-  readonly votes: readonly unknown[];
+  readonly votes: readonly GroupVote[];
 }
 
-export interface GroupTallyResult {
-  readonly tally?: unknown;
+export interface GroupTallyQueryResult {
+  readonly tally?: GroupTallyResult;
 }
 
 // SKU query results
 export interface SkuParamsResult {
-  readonly params?: unknown;
+  readonly params?: SkuParams;
 }
 
 export interface ProviderResult {
-  readonly provider?: unknown;
+  readonly provider?: Provider;
 }
 
 export interface ProvidersResult extends PaginatedResult {
-  readonly providers: readonly unknown[];
+  readonly providers: readonly Provider[];
 }
 
 export interface SkuResult {
-  readonly sku?: unknown;
+  readonly sku?: SKU;
 }
 
 export interface SkusResult extends PaginatedResult {
-  readonly skus: readonly unknown[];
+  readonly skus: readonly SKU[];
 }
 
 /**
@@ -534,7 +657,7 @@ export type QueryResult =
   | GroupProposalsResult
   | GroupVoteResult
   | GroupVotesResult
-  | GroupTallyResult;
+  | GroupTallyQueryResult;
 
 /**
  * Result from a Cosmos query
