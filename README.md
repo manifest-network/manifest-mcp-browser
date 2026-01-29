@@ -135,6 +135,11 @@ interface ManifestMCPConfig {
   rateLimit?: {
     requestsPerSecond?: number; // Max RPC requests per second (default: 10)
   };
+  retry?: {
+    maxRetries?: number;   // Max retry attempts for transient failures (default: 3)
+    baseDelayMs?: number;  // Base delay before first retry in ms (default: 1000)
+    maxDelayMs?: number;   // Maximum delay between retries in ms (default: 10000)
+  };
 }
 ```
 
@@ -281,6 +286,31 @@ Built-in protections against resource exhaustion:
 - **Pagination**: All list queries default to 100 items (configurable via `--limit` flag, max 1000)
 - **Broadcast timeout**: Transactions timeout after 60 seconds
 - **Poll interval**: Transaction confirmation polled every 3 seconds
+
+### Automatic Retry
+
+Transient RPC failures are automatically retried with exponential backoff:
+
+- **Retried errors**: Network failures (ECONNREFUSED, ECONNRESET, ETIMEDOUT), timeouts, HTTP 5xx, rate limits (429)
+- **Not retried**: Validation errors, insufficient funds, invalid addresses, wallet errors, unknown modules
+- **Default behavior**: 3 retries with 1-10 second delays (exponential backoff with jitter)
+- **Configurable**: Set `retry.maxRetries: 0` to disable retries
+
+```typescript
+const server = new ManifestMCPServer({
+  config: {
+    chainId: 'manifest-ledger-testnet',
+    rpcUrl: 'https://nodes.chandrastation.com/rpc/manifest/',
+    gasPrice: '1.0umfx',
+    retry: {
+      maxRetries: 5,      // More retries for unreliable networks
+      baseDelayMs: 2000,  // Start with 2 second delay
+      maxDelayMs: 30000,  // Cap at 30 seconds
+    },
+  },
+  walletProvider,
+});
+```
 
 ### Best Practices
 

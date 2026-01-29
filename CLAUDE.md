@@ -99,6 +99,12 @@ Transaction: bank, staking, distribution, gov, billing, manifest, sku, group
 - Transaction broadcast timeout (60 seconds)
 - Broadcast poll interval (3 seconds)
 
+**Retry Logic** (`src/retry.ts`):
+- Automatic retry for transient RPC failures with exponential backoff and jitter
+- Configurable via `config.retry`: `maxRetries` (default: 3), `baseDelayMs` (default: 1000), `maxDelayMs` (default: 10000)
+- Retries: network errors (ECONNREFUSED, ECONNRESET, ETIMEDOUT), timeouts, HTTP 5xx, rate limits (429)
+- Does NOT retry: validation errors, insufficient funds, invalid addresses, wallet errors, unknown modules
+
 **Sensitive Data:**
 - Error responses sanitize sensitive fields (mnemonic, privateKey, secret, etc.)
 - Mnemonic cleared on wallet disconnect
