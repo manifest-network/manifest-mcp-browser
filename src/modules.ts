@@ -274,10 +274,10 @@ const TX_MODULES: TxModuleRegistry = {
     handler: routeBillingTransaction,
     subcommands: [
       { name: 'fund-credit', description: 'Fund credit for a tenant', args: '<tenant-address> <amount> (e.g., manifest1abc... 1000000umfx)' },
-      { name: 'create-lease', description: 'Create a new lease', args: '[--meta-hash <hex>] <sku-uuid:quantity>... (e.g., sku-123:1 sku-456:2)' },
+      { name: 'create-lease', description: 'Create a new lease', args: '[--meta-hash <hex>] <sku-uuid:quantity[:service-name]>... (e.g., sku-123:1 or sku-123:1:web sku-123:1:db)' },
       { name: 'close-lease', description: 'Close one or more leases', args: '[--reason <text>] <lease-uuid>... (e.g., lease-123 lease-456)' },
       { name: 'withdraw', description: 'Withdraw earnings from leases', args: '<lease-uuid>... OR --provider <provider-uuid> [--limit <1-100>]' },
-      { name: 'create-lease-for-tenant', description: 'Create a lease on behalf of a tenant', args: '<tenant-address> [--meta-hash <hex>] <sku-uuid:quantity>...' },
+      { name: 'create-lease-for-tenant', description: 'Create a lease on behalf of a tenant', args: '<tenant-address> [--meta-hash <hex>] <sku-uuid:quantity[:service-name]>...' },
       { name: 'acknowledge-lease', description: 'Acknowledge one or more pending leases', args: '<lease-uuid>...' },
       { name: 'reject-lease', description: 'Reject one or more pending leases', args: '[--reason <text>] <lease-uuid>...' },
       { name: 'cancel-lease', description: 'Cancel one or more pending leases', args: '<lease-uuid>...' },

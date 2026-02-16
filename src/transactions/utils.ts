@@ -356,6 +356,71 @@ export function parseVoteOption(optionStr: string, voteOptionEnum: VoteOptionEnu
   }
 }
 
+/** RFC 1123 DNS label pattern: 1-63 lowercase alphanumeric or hyphens, no leading/trailing hyphen */
+const DNS_LABEL_RE = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+
+/**
+ * Parsed lease item with optional service name for stack deployments.
+ */
+export interface ParsedLeaseItem {
+  skuUuid: string;
+  quantity: bigint;
+  serviceName: string;
+}
+
+/**
+ * Parse a lease item string in the format "sku-uuid:quantity" or "sku-uuid:quantity:service-name".
+ * The service-name is optional and used for stack (multi-service) deployments.
+ *
+ * @param input - The string to parse (e.g., "sku-123:1" or "sku-123:1:web")
+ * @returns Parsed lease item with skuUuid, quantity, and serviceName
+ */
+export function parseLeaseItem(input: string): ParsedLeaseItem {
+  const parts = input.split(':');
+  if (parts.length < 2 || parts.length > 3) {
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.TX_FAILED,
+      `Invalid lease item format: "${input}". Expected sku-uuid:quantity or sku-uuid:quantity:service-name`
+    );
+  }
+
+  const [skuUuid, quantityStr, serviceName] = parts;
+
+  if (!skuUuid) {
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.TX_FAILED,
+      `Invalid lease item format: "${input}". Missing sku-uuid.`
+    );
+  }
+
+  if (!quantityStr) {
+    throw new ManifestMCPError(
+      ManifestMCPErrorCode.TX_FAILED,
+      `Invalid lease item format: "${input}". Missing quantity.`
+    );
+  }
+
+  const quantity = parseBigInt(quantityStr, 'quantity');
+
+  if (serviceName !== undefined) {
+    if (!serviceName) {
+      throw new ManifestMCPError(
+        ManifestMCPErrorCode.TX_FAILED,
+        `Invalid lease item format: "${input}". Empty service-name after trailing colon.`
+      );
+    }
+    if (!DNS_LABEL_RE.test(serviceName)) {
+      throw new ManifestMCPError(
+        ManifestMCPErrorCode.TX_FAILED,
+        `Invalid service name: "${serviceName}". Must be a valid RFC 1123 DNS label: ` +
+        `1-63 lowercase alphanumeric characters or hyphens, must not start or end with a hyphen.`
+      );
+    }
+  }
+
+  return { skuUuid, quantity, serviceName: serviceName ?? '' };
+}
+
 /**
  * Parse amount string into coin (e.g., "1000umfx" -> { amount: "1000", denom: "umfx" })
  * Supports simple denoms (umfx), IBC denoms (ibc/...), and factory denoms (factory/creator/subdenom)

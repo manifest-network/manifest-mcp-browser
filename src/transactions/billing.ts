@@ -1,7 +1,7 @@
 import { SigningStargateClient } from '@cosmjs/stargate';
 import { liftedinit } from '@manifest-network/manifestjs';
 import { CosmosTxResult, ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
-import { parseAmount, buildTxResult, parseBigInt, validateAddress, validateArgsLength, extractFlag, filterConsumedArgs, parseColonPair, requireArgs, parseHexBytes, MAX_META_HASH_BYTES } from './utils.js';
+import { parseAmount, buildTxResult, parseBigInt, validateAddress, validateArgsLength, extractFlag, filterConsumedArgs, parseLeaseItem, requireArgs, parseHexBytes, MAX_META_HASH_BYTES } from './utils.js';
 import { getSubcommandUsage, throwUnsupportedSubcommand } from '../modules.js';
 
 const {
@@ -49,13 +49,10 @@ export async function routeBillingTransaction(
 
       // Filter out --meta-hash and its value to get item args
       const itemArgs = filterConsumedArgs(args, consumedIndices);
-      requireArgs(itemArgs, 1, ['sku-uuid:quantity'], 'billing create-lease');
+      requireArgs(itemArgs, 1, ['sku-uuid:quantity[:service-name]'], 'billing create-lease');
 
-      // Parse items (format: sku-uuid:quantity ...)
-      const items = itemArgs.map((arg) => {
-        const [skuUuid, quantityStr] = parseColonPair(arg, 'sku-uuid', 'quantity', 'lease item');
-        return { skuUuid, quantity: parseBigInt(quantityStr, 'quantity') };
-      });
+      // Parse items (format: sku-uuid:quantity or sku-uuid:quantity:service-name)
+      const items = itemArgs.map((arg) => parseLeaseItem(arg));
 
       const msg = {
         typeUrl: '/liftedinit.billing.v1.MsgCreateLease',
@@ -167,16 +164,13 @@ export async function routeBillingTransaction(
 
       // Filter out --meta-hash and its value to get remaining args
       const remainingArgs = filterConsumedArgs(args, consumedIndices);
-      requireArgs(remainingArgs, 2, ['tenant-address', 'sku-uuid:quantity'], 'billing create-lease-for-tenant');
+      requireArgs(remainingArgs, 2, ['tenant-address', 'sku-uuid:quantity[:service-name]'], 'billing create-lease-for-tenant');
 
       const [tenant, ...itemArgs] = remainingArgs;
       validateAddress(tenant, 'tenant address');
 
-      // Parse items (format: sku-uuid:quantity ...)
-      const items = itemArgs.map((arg) => {
-        const [skuUuid, quantityStr] = parseColonPair(arg, 'sku-uuid', 'quantity', 'lease item');
-        return { skuUuid, quantity: parseBigInt(quantityStr, 'quantity') };
-      });
+      // Parse items (format: sku-uuid:quantity or sku-uuid:quantity:service-name)
+      const items = itemArgs.map((arg) => parseLeaseItem(arg));
 
       const msg = {
         typeUrl: '/liftedinit.billing.v1.MsgCreateLeaseForTenant',

@@ -1,4 +1,5 @@
-export { parseAmount, buildTxResult, parseBigInt, parseHexBytes, bytesToHex } from './utils.js';
+export { parseAmount, buildTxResult, parseBigInt, parseLeaseItem, parseHexBytes, bytesToHex } from './utils.js';
+export type { ParsedLeaseItem } from './utils.js';
 export { routeBankTransaction } from './bank.js';
 export { routeStakingTransaction } from './staking.js';
 export { routeDistributionTransaction } from './distribution.js';

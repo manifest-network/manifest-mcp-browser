@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { toBech32 } from '@cosmjs/encoding';
-import { parseAmount, parseBigInt, extractFlag, extractBooleanFlag, filterConsumedArgs, parseColonPair, validateAddress, validateMemo, validateArgsLength, requireArgs, parseHexBytes, bytesToHex, parseVoteOption } from './utils.js';
+import { parseAmount, parseBigInt, extractFlag, extractBooleanFlag, filterConsumedArgs, parseColonPair, parseLeaseItem, validateAddress, validateMemo, validateArgsLength, requireArgs, parseHexBytes, bytesToHex, parseVoteOption } from './utils.js';
 import { ManifestMCPError, ManifestMCPErrorCode } from '../types.js';
 
 describe('parseAmount', () => {
@@ -236,6 +236,66 @@ describe('parseColonPair', () => {
     } catch (error) {
       expect((error as ManifestMCPError).message).toContain('Missing amount');
     }
+  });
+});
+
+describe('parseLeaseItem', () => {
+  it('should parse sku-uuid:quantity (no service name)', () => {
+    const result = parseLeaseItem('sku-123:1');
+    expect(result).toEqual({ skuUuid: 'sku-123', quantity: BigInt(1), serviceName: '' });
+  });
+
+  it('should parse sku-uuid:quantity:service-name', () => {
+    const result = parseLeaseItem('sku-123:1:web');
+    expect(result).toEqual({ skuUuid: 'sku-123', quantity: BigInt(1), serviceName: 'web' });
+  });
+
+  it('should accept valid DNS label service names', () => {
+    expect(parseLeaseItem('sku:2:db').serviceName).toBe('db');
+    expect(parseLeaseItem('sku:1:my-service-1').serviceName).toBe('my-service-1');
+    expect(parseLeaseItem('sku:1:a').serviceName).toBe('a');
+    expect(parseLeaseItem('sku:1:a1b2c3').serviceName).toBe('a1b2c3');
+  });
+
+  it('should reject invalid service names', () => {
+    expect(() => parseLeaseItem('sku:1:-web')).toThrow(ManifestMCPError);
+    expect(() => parseLeaseItem('sku:1:web-')).toThrow(ManifestMCPError);
+    expect(() => parseLeaseItem('sku:1:Web')).toThrow(ManifestMCPError);
+    expect(() => parseLeaseItem('sku:1:web_server')).toThrow(ManifestMCPError);
+    expect(() => parseLeaseItem('sku:1:web.server')).toThrow(ManifestMCPError);
+  });
+
+  it('should reject empty service name (trailing colon)', () => {
+    expect(() => parseLeaseItem('sku:1:')).toThrow(ManifestMCPError);
+    expect(() => parseLeaseItem('sku:1:')).toThrow(/Empty service-name/);
+  });
+
+  it('should reject too many colons', () => {
+    expect(() => parseLeaseItem('sku:1:web:extra')).toThrow(ManifestMCPError);
+  });
+
+  it('should reject missing colon', () => {
+    expect(() => parseLeaseItem('nocolon')).toThrow(ManifestMCPError);
+  });
+
+  it('should reject empty sku-uuid', () => {
+    expect(() => parseLeaseItem(':1')).toThrow(ManifestMCPError);
+  });
+
+  it('should reject empty quantity', () => {
+    expect(() => parseLeaseItem('sku:')).toThrow(ManifestMCPError);
+  });
+
+  it('should reject non-integer quantity', () => {
+    expect(() => parseLeaseItem('sku:abc')).toThrow(ManifestMCPError);
+    expect(() => parseLeaseItem('sku:1.5:web')).toThrow(ManifestMCPError);
+  });
+
+  it('should handle UUID-style sku-uuids', () => {
+    const result = parseLeaseItem('019beb87-09de-7000-beef-ae733e73ff23:1:web');
+    expect(result.skuUuid).toBe('019beb87-09de-7000-beef-ae733e73ff23');
+    expect(result.quantity).toBe(BigInt(1));
+    expect(result.serviceName).toBe('web');
   });
 });
 
