@@ -69,6 +69,10 @@ import type {
   Params as BillingParams,
 } from '@manifest-network/manifestjs/dist/codegen/liftedinit/billing/v1/types';
 
+import type {
+  LeaseItemInput,
+} from '@manifest-network/manifestjs/dist/codegen/liftedinit/billing/v1/tx';
+
 // SKU module types (Manifest-specific)
 import type {
   Provider,
@@ -112,6 +116,7 @@ export type {
   GroupVote,
   GroupTallyResult,
   Lease,
+  LeaseItemInput,
   CreditAccount,
   BillingParams,
   QueryCreditEstimateResponse,
