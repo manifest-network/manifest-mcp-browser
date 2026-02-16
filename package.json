@@ -41,7 +41,7 @@
     "@cosmjs/encoding": "0.32.4",
     "@cosmjs/proto-signing": "0.32.4",
     "@cosmjs/stargate": "npm:@manifest-network/stargate@0.32.4-ll.3",
-    "@manifest-network/manifestjs": "2.2.0-billing-v2.2",
+    "@manifest-network/manifestjs": "2.2.0-billing-v2.3",
     "@modelcontextprotocol/sdk": "1.25.3",
     "limiter": "3.0.0"
   },
